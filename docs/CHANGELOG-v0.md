@@ -4,6 +4,18 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-23
+
+### Added
+- **Cache-busting on version change.** `index.html` now references static assets as `style.css?v=<APP_VERSION>` and `game.js?v=<APP_VERSION>` (the version is injected server-side from `app.__version__`). When a new release ships, the URLs change and Cloudflare/browsers treat them as new resources — no manual cache purge required.
+- HTTP response middleware sets explicit `Cache-Control` headers:
+  - `/static/*` → `public, max-age=31536000, immutable` (cache effectively forever; safe because URLs are versioned).
+  - `/` → `no-cache` (the entry-point HTML must always be revalidated so new versioned URLs are picked up immediately).
+  - `/health` and `/api/*` → `no-store` (never cache dynamic JSON).
+
+### Changed
+- `app/main.py` renders `index.html` through a small in-memory template (single `{{VERSION}}` substitution, cached with `lru_cache`) instead of returning the raw file. Negligible per-request cost; rendered once per process.
+
 ## [0.4.4] — 2026-05-23
 
 ### Added
