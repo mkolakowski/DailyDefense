@@ -4,6 +4,10 @@
   const GRID_W = 10;
   const GRID_H = 20;
 
+  // Turrets must be placed within this Chebyshev distance of any defense
+  // cell. Keeps players from spamming the spawn edge.
+  const PLACEMENT_RADIUS = 5;
+
   const MODES = {
     daily: {
       label: "Daily",
@@ -56,6 +60,33 @@
         speed: 0.050, hp: 0.20,
         spacingBase: 32, spacingDecay: 1.4, spacingMin: 3,
         runnersBase: 6, runnersPerWave: 5, tanksPerWave: 1.6,
+      },
+    },
+    "random": {
+      label: "Random · 12 waves",
+      family: "random",
+      length: "finite",
+      startMoney: 0,           // money is not used; HUD shows "—"
+      startLives: 20,
+      maxWave: 12,
+      autoAdvance: false,
+      freeTurrets: true,
+    },
+    "random-infinite": {
+      label: "Random · Infinite",
+      family: "random",
+      length: "infinite",
+      startMoney: 0,
+      startLives: 20,
+      maxWave: Infinity,
+      autoAdvance: true,
+      autoAdvanceFrames: 180,           // ~3s
+      freeTurrets: true,
+      // Random-infinite borrows endless-normal's escalation curve.
+      scaling: {
+        speed: 0.035, hp: 0.15,
+        spacingBase: 38, spacingDecay: 1.2, spacingMin: 5,
+        runnersBase: 5, runnersPerWave: 4, tanksPerWave: 1.2,
       },
     },
   };
@@ -246,7 +277,8 @@
   function waveSpec(n, mode) {
     const cfg = MODES[mode] || MODES.daily;
     let runners, tanks, spacing, hpMult, speedMult;
-    if (cfg.family === "endless") {
+    if (cfg.scaling) {
+      // Endless family and random-infinite use a per-wave scaling table.
       const s = cfg.scaling;
       runners = s.runnersBase + Math.floor(n * s.runnersPerWave);
       tanks = Math.floor(n * s.tanksPerWave);
@@ -294,11 +326,14 @@
     startedAt: 0,
     elapsedMs: 0,
     nextWaveCountdown: 0,
+    nextRandomTurret: "close",
     leaderboards: {
       "daily": [],
       "endless-easy": [],
       "endless-normal": [],
       "endless-hard": [],
+      "random": [],
+      "random-infinite": [],
     },
   };
 
@@ -323,7 +358,13 @@
   const elModePicker = document.getElementById("mode-picker");
   const elModeButtons = Array.from(document.querySelectorAll(".mode-btn"));
   const elDifficultyPicker = document.getElementById("difficulty-picker");
-  const elDifficultyButtons = Array.from(document.querySelectorAll(".diff-btn"));
+  const elDifficultyButtons = Array.from(document.querySelectorAll("#difficulty-picker .diff-btn"));
+  const elRandomLengthPicker = document.getElementById("random-length-picker");
+  const elRandomLengthButtons = Array.from(document.querySelectorAll("#random-length-picker .diff-btn"));
+  const elRandomNext = document.getElementById("random-next");
+  const elRandomNextSwatch = document.getElementById("random-next-swatch");
+  const elRandomNextName = document.getElementById("random-next-name");
+  const elRandomNextMeta = document.getElementById("random-next-meta");
 
   // --- Robust button activator --------------------------------------------
   // iOS Safari sometimes swallows `click` events on dynamically toggled
@@ -394,8 +435,9 @@
   }
 
   function updateHUD() {
+    const cfg = MODES[state.mode];
     elLives.textContent = state.lives;
-    elMoney.textContent = state.money;
+    elMoney.textContent = cfg && cfg.freeTurrets ? "—" : state.money;
     elWave.textContent = state.wave;
     elScore.textContent = state.score;
     syncTurretButtons();
@@ -416,8 +458,10 @@
 
   function updateModeLabel() {
     const cfg = MODES[state.mode];
-    if (cfg && cfg.family === "endless") {
+    if (cfg && (cfg.family === "endless" || cfg.maxWave === Infinity)) {
       elDaily.textContent = `· ${cfg.label} · ${formatElapsed(state.elapsedMs)}`;
+    } else if (cfg && cfg.family === "random") {
+      elDaily.textContent = `· ${cfg.label}`;
     } else if (state.dailyDate) {
       elDaily.textContent = `· daily ${state.dailyDate}`;
     } else {
@@ -445,18 +489,43 @@
     return { x, y };
   }
 
+  function isEligibleCell(x, y) {
+    if (!state.map) return false;
+    if (x < 0 || y < 0 || x >= GRID_W || y >= GRID_H) return false;
+    const tile = state.map.grid[y][x];
+    if (tile.kind !== "empty") return false;
+    for (const d of state.map.defenses) {
+      const dist = Math.max(Math.abs(d.x - x), Math.abs(d.y - y));
+      if (dist <= PLACEMENT_RADIUS) return true;
+    }
+    return false;
+  }
+
+  function rollNextTurret() {
+    const keys = Object.keys(TURRETS);
+    state.nextRandomTurret = keys[Math.floor(Math.random() * keys.length)];
+  }
+
   function tryPlaceTurret(cell) {
-    if (!cell || state.gameOver) return;
-    const t = TURRETS[state.selectedTurret];
-    const tile = state.map.grid[cell.y][cell.x];
-    if (tile.kind !== "empty") return;
+    if (!cell || state.gameOver || !state.map) return;
+    if (!isEligibleCell(cell.x, cell.y)) return;
     if (state.turrets.some(tr => tr.x === cell.x && tr.y === cell.y)) return;
-    if (state.money < t.cost) return;
-    state.money -= t.cost;
+    const cfg = MODES[state.mode];
+    const isRandom = cfg && cfg.freeTurrets;
+    const type = isRandom ? state.nextRandomTurret : state.selectedTurret;
+    const t = TURRETS[type];
+    if (!isRandom) {
+      if (state.money < t.cost) return;
+      state.money -= t.cost;
+    }
     state.turrets.push({
-      x: cell.x, y: cell.y, type: state.selectedTurret,
+      x: cell.x, y: cell.y, type,
       cd: 0, xp: 0, level: 1,
     });
+    if (isRandom) {
+      rollNextTurret();
+      syncRandomNext();
+    }
     updateHUD();
   }
 
@@ -698,6 +767,19 @@
         }
       }
     }
+    // Subtle accent fill on cells where a turret can actually be placed.
+    if (!state.gameOver) {
+      ctx.fillStyle = "rgba(122, 208, 255, 0.10)";
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          if (isEligibleCell(x, y)
+              && !state.turrets.some(t => t.x === x && t.y === y)) {
+            ctx.fillRect(x * cs, y * cs, cs, cs);
+          }
+        }
+      }
+    }
+
     ctx.strokeStyle = "#1a223e";
     ctx.lineWidth = 1;
     for (let x = 0; x <= GRID_W; x++) {
@@ -769,17 +851,24 @@
     state.nextWaveCountdown = 0;
     state.startedAt = 0;
     state.elapsedMs = 0;
+    if (cfg.freeTurrets) rollNextTurret();
+    syncRandomNext();
   }
 
-  // Family ("daily" | "endless") and difficulty ("easy" | "normal" | "hard")
-  // resolve to a single mode key like "endless-normal" used everywhere else.
+  // Family + sub-selector resolve to a single mode key used everywhere else.
+  // - daily               -> "daily"
+  // - endless + difficulty -> "endless-<easy|normal|hard>"
+  // - random + length      -> "random" | "random-infinite"
   let pickerDifficulty = "normal";
-  function modeKeyFor(family, difficulty) {
-    return family === "daily" ? "daily" : `endless-${difficulty}`;
+  let pickerLength = "finite";
+  function modeKeyFor(family) {
+    if (family === "daily") return "daily";
+    if (family === "endless") return `endless-${pickerDifficulty}`;
+    return pickerLength === "infinite" ? "random-infinite" : "random";
   }
 
   function setFamily(family) {
-    const mode = modeKeyFor(family, pickerDifficulty);
+    const mode = modeKeyFor(family);
     if (!MODES[mode]) return;
     state.mode = mode;
     for (const el of elModeButtons) {
@@ -787,6 +876,9 @@
     }
     if (elDifficultyPicker) {
       elDifficultyPicker.classList.toggle("hidden", family !== "endless");
+    }
+    if (elRandomLengthPicker) {
+      elRandomLengthPicker.classList.toggle("hidden", family !== "random");
     }
     applyModeAndRefresh();
   }
@@ -797,9 +889,34 @@
       el.classList.toggle("selected", el.dataset.difficulty === difficulty);
     }
     if (MODES[state.mode] && MODES[state.mode].family === "endless") {
-      state.mode = modeKeyFor("endless", difficulty);
+      state.mode = modeKeyFor("endless");
       applyModeAndRefresh();
     }
+  }
+
+  function setLength(length) {
+    pickerLength = length;
+    for (const el of elRandomLengthButtons) {
+      el.classList.toggle("selected", el.dataset.length === length);
+    }
+    if (MODES[state.mode] && MODES[state.mode].family === "random") {
+      state.mode = modeKeyFor("random");
+      applyModeAndRefresh();
+    }
+  }
+
+  function syncRandomNext() {
+    const cfg = MODES[state.mode];
+    const isRandom = !!(cfg && cfg.freeTurrets);
+    if (elRandomNext) elRandomNext.classList.toggle("hidden", !isRandom);
+    if (elTurretGrid) elTurretGrid.classList.toggle("hidden", isRandom);
+    if (!isRandom) return;
+    const t = TURRETS[state.nextRandomTurret];
+    if (!t) return;
+    elRandomNextSwatch.style.background = t.color;
+    elRandomNextName.textContent = t.name;
+    elRandomNextMeta.textContent =
+      `rng ${t.range.toFixed(1)} · dmg ${t.damage}${t.splash ? " · splash" : ""}`;
   }
 
   function applyModeAndRefresh() {
@@ -821,6 +938,13 @@
       elOverlayBody.textContent =
         `${cfg.label}: $${cfg.startMoney} to start, ${cfg.startLives} lives. ` +
         "Waves never stop and get faster. Survive as long as you can.";
+    } else if (cfg && cfg.family === "random") {
+      const lengthBlurb = cfg.length === "infinite"
+        ? "Waves never stop and get faster."
+        : "12 waves to survive.";
+      elOverlayBody.textContent =
+        `Random mode: no money, no choice. ${lengthBlurb} ` +
+        "Tap an eligible (highlighted) cell to drop the next random turret.";
     } else {
       elOverlayBody.textContent =
         "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.";
@@ -847,8 +971,8 @@
     state.waveActive = false;
     state.nextWaveCountdown = 0;
     const cfg = MODES[state.mode];
-    const isEndless = cfg && cfg.family === "endless";
-    const body = isEndless
+    const isInfinite = cfg && cfg.maxWave === Infinity;
+    const body = isInfinite
       ? `Survived ${formatElapsed(state.elapsedMs)} · wave ${state.wave} · score ${state.score}.`
       : `Final score: ${state.score}.`;
     showOverlay({
@@ -894,6 +1018,9 @@
   }
   for (const btn of elDifficultyButtons) {
     activate(btn, () => setDifficulty(btn.dataset.difficulty));
+  }
+  for (const btn of elRandomLengthButtons) {
+    activate(btn, () => setLength(btn.dataset.length));
   }
 
   async function fetchDaily() {
@@ -943,7 +1070,11 @@
     state.map = generateMap(daily.seed);
 
     // Pre-fetch all leaderboards in parallel.
-    const modes = ["daily", "endless-easy", "endless-normal", "endless-hard"];
+    const modes = [
+      "daily",
+      "endless-easy", "endless-normal", "endless-hard",
+      "random", "random-infinite",
+    ];
     const results = await Promise.all(modes.map(m => fetchScores(daily.date, m)));
     modes.forEach((m, i) => {
       state.leaderboards[m] = results[i].scores || [];

@@ -195,6 +195,24 @@ main {
 .turret-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .turret-btn:active { transform: translateY(1px); }
 
+/* Random mode "Next turret" indicator. Reuses .turret-btn styling but is
+ * non-interactive — the actual placement happens by tapping the board. */
+.random-next {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.random-next-label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+}
+#random-next-card {
+  cursor: default;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+
 button.primary, button.ghost, .turret-btn {
   -webkit-appearance: none;
   appearance: none;

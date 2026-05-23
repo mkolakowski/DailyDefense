@@ -4,6 +4,22 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — 2026-05-23
+
+### Added
+- **Random mode.** A third top-level mode in the picker — no money management; tap any eligible cell and the next random turret (Close / Medium / AoE) drops there. A fresh random turret rolls after every placement. Two length options:
+  - **12 waves** — finite run (`random` mode key).
+  - **Infinite** — endless-normal-style scaling, auto-advance, never stops (`random-infinite` mode key).
+- **Placement radius.** Turrets must be placed within a Chebyshev distance of `5` cells of any defense point — the "home base" zone. The first stretch of every path is now intentionally undefended, forcing concentrated placement around the base. Applies to all modes.
+- **Eligible-cell highlighting.** Cells where a turret can be placed are now drawn with a soft cyan overlay on the board. Updates live as turrets are placed (occupied cells lose the highlight).
+- **Per-mode leaderboards** for `random` and `random-infinite` (six leaderboards total now).
+- New "Next turret" indicator in the sidebar (replaces the picker when in Random mode).
+- Sidebar HUD shows `—` for money in Random mode.
+
+### Changed
+- `waveSpec()` now reads scaling from any mode that has a `cfg.scaling` table (was: only `cfg.family === "endless"`). This makes `random-infinite` reuse the endless-normal escalation curve without duplication.
+- `endRun()` shows the survival format (`Survived 1m 23s · wave N · score X`) for any infinite-wave mode, not just `endless-*`.
+
 ## [0.9.0] — 2026-05-23
 
 ### Added — Material Design migration, phase 1 (foundations)

@@ -57,6 +57,14 @@
             <strong>Hard</strong><small>$200 · 15 lives</small>
           </button>
         </div>
+        <div id="random-length-picker" class="difficulty-picker hidden">
+          <button type="button" class="diff-btn selected" data-length="finite">
+            <strong>12 waves</strong><small>finite run</small>
+          </button>
+          <button type="button" class="diff-btn" data-length="infinite">
+            <strong>Infinite</strong><small>survive forever</small>
+          </button>
+        </div>
         <div class="overlay-actions">
           <button type="button" id="overlay-start" class="primary">Start</button>
           <button type="button" id="overlay-submit" class="primary hidden">Submit Score</button>
@@ -70,6 +78,16 @@
     <section class="shop">
       <h3>Turrets</h3>
       <div class="turret-grid" id="turret-grid"></div>
+      <div id="random-next" class="random-next hidden">
+        <small id="random-next-label" class="random-next-label">Next turret — tap a cell to place</small>
+        <div id="random-next-card" class="turret-btn">
+          <span class="swatch" id="random-next-swatch"></span>
+          <span class="meta">
+            <strong id="random-next-name">—</strong>
+            <small id="random-next-meta">random</small>
+          </span>
+        </div>
+      </div>
       <button type="button" id="start-wave" class="primary">Start Wave</button>
       <button type="button" id="reset-run" class="ghost">Reset</button>
     </section>

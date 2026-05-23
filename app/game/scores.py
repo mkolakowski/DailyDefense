@@ -8,7 +8,14 @@ from pathlib import Path
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/app/data"))
 SCORES_FILE = DATA_DIR / "scores.json"
 
-VALID_MODES = ("daily", "endless-easy", "endless-normal", "endless-hard")
+VALID_MODES = (
+    "daily",
+    "endless-easy",
+    "endless-normal",
+    "endless-hard",
+    "random",
+    "random-infinite",
+)
 
 _lock = threading.Lock()
 
