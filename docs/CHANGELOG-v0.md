@@ -4,6 +4,16 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] — 2026-05-23
+
+### Added
+- **Favicon.** A small shield-with-defense-point icon (cyan outline + yellow centre dot on the app's dark navy background, matching the in-game palette). Shipped as:
+  - `favicon.svg` (modern browsers)
+  - `icon-32.png` (favicon fallback)
+  - `icon-180.png` (`apple-touch-icon` for iOS home-screen install)
+  - `/favicon.ico` is served as the 32×32 PNG so legacy clients stop logging 404s.
+- All favicon URLs are versioned via `?v=<APP_VERSION>` so the cache-busting policy from v0.5.0 applies — a new icon in a future release will be picked up immediately.
+
 ## [0.5.3] — 2026-05-23
 
 ### Fixed
