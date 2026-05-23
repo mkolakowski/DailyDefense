@@ -41,6 +41,44 @@ uvicorn app.main:app --host 0.0.0.0 --port 8014 --reload
 
 Keyboard: `1`/`2`/`3` select turret · `N` next wave · `R` reset.
 
+## Cloudflare Tunnel
+
+The app trusts `X-Forwarded-*` headers from any proxy (uvicorn is started with
+`--proxy-headers --forwarded-allow-ips=*`), so it can sit behind a Cloudflare
+Tunnel as-is.
+
+### If your `cloudflared` container runs on the same Docker host
+
+A compose override is provided to attach the app to an external network where
+your tunnel container lives.
+
+1. Make sure the network exists (whatever name your cloudflared is on):
+   ```bash
+   docker network ls
+   docker network create cloudflared        # only if it doesn't exist
+   ```
+2. Start DailyDefense joined to that network:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+   ```
+3. In the Cloudflare Zero Trust dashboard, set the public hostname for your
+   tunnel to point at:
+   ```
+   http://dailydefense:8014
+   ```
+   `dailydefense` is the container name and is DNS-resolvable from any other
+   container attached to the same Docker network.
+
+To use a different network name, set `CLOUDFLARED_NETWORK` in `.env` (or
+inline) before bringing the stack up.
+
+### If `cloudflared` runs directly on the host
+
+Port `8014` is already published, so just point the tunnel at:
+```
+http://localhost:8014
+```
+
 ## Project layout
 
 ```

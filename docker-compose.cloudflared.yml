@@ -1,0 +1,31 @@
+# Compose override that attaches the `app` service to an existing external
+# Docker network where your `cloudflared` container is running.
+#
+# Usage:
+#   1) Make sure the network exists (replace `cloudflared` with whatever your
+#      cloudflared container is on):
+#         docker network ls
+#         docker network create cloudflared   # only if it doesn't exist
+#
+#   2) Start DailyDefense joined to that network:
+#         docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+#
+#   3) Point your Cloudflare tunnel public hostname to:
+#         http://dailydefense:8014
+#      (the service name `dailydefense` is reachable from any other container
+#      attached to the same network)
+#
+# Override the network name with the CLOUDFLARED_NETWORK env var if needed:
+#   CLOUDFLARED_NETWORK=my-tunnel-net docker compose -f docker-compose.yml \
+#     -f docker-compose.cloudflared.yml up -d
+
+services:
+  app:
+    networks:
+      - default
+      - cloudflared
+
+networks:
+  cloudflared:
+    external: true
+    name: ${CLOUDFLARED_NETWORK:-cloudflared}

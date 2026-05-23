@@ -4,6 +4,13 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-05-23
+
+### Added
+- **Cloudflare Tunnel support.** Uvicorn now starts with `--proxy-headers --forwarded-allow-ips=*` so the app sees the correct scheme/host when sitting behind any reverse proxy.
+- `docker-compose.cloudflared.yml` override file that attaches the `app` container to an existing external Docker network (default name `cloudflared`, override via `CLOUDFLARED_NETWORK`). The tunnel container then reaches the app at `http://dailydefense:8014`.
+- README section documenting both same-Docker-network and host-cloudflared setups.
+
 ## [0.3.1] — 2026-05-23
 
 ### Changed
