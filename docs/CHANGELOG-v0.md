@@ -4,6 +4,12 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-05-23
+
+### Changed
+- `.env.example` expanded into a fully-commented sample environment file with grouped sections (Application, Sessions, Storage, Authentication) and inline guidance.
+- Documented the `DATA_DIR` variable (used by the score store) — previously read by code but not surfaced in the template.
+
 ## [0.3.0] — 2026-05-23
 
 ### Added
