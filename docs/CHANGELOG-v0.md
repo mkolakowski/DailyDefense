@@ -4,6 +4,18 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-05-23
+
+### Changed
+- **Random mode economy.** Replaces the "infinite-tap-to-place" loop introduced in v0.10.0:
+  - **Seeded queue** — every Random run starts with **4 turrets** pre-loaded into a queue, so you can lay out an initial defence immediately.
+  - **Time grant** — every **10 seconds** a new turret joins the queue.
+  - **Kill grant** — every **5 enemy kills** a new turret joins the queue. Both grants run in parallel.
+  - Tapping an eligible cell consumes one turret from the queue; if the queue is empty, the tap does nothing.
+  - HUD's `$` slot now shows the queue count when in Random mode (it shows `state.turretQueue` instead of `state.money`).
+  - The "Next turret" card now also shows progress: `queue 3 · next in 7s or 3 kills`, and dims to "Queue empty / Waiting for next turret…" when the queue is exhausted.
+- Constants live on each random mode config (`randomSeedCount`, `randomGrantFrames`, `randomKillsPerGrant`) so tuning is a one-row change.
+
 ## [0.10.1] — 2026-05-23
 
 ### Fixed

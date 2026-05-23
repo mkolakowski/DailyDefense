@@ -66,11 +66,14 @@
       label: "Random · 12 waves",
       family: "random",
       length: "finite",
-      startMoney: 0,           // money is not used; HUD shows "—"
+      startMoney: 0,
       startLives: 20,
       maxWave: 12,
       autoAdvance: false,
       freeTurrets: true,
+      randomSeedCount: 4,                // turrets pre-loaded into the queue
+      randomGrantFrames: 600,            // 10s @ 60fps → +1 to queue
+      randomKillsPerGrant: 5,            // every 5 kills → +1 to queue
     },
     "random-infinite": {
       label: "Random · Infinite",
@@ -80,8 +83,11 @@
       startLives: 20,
       maxWave: Infinity,
       autoAdvance: true,
-      autoAdvanceFrames: 180,           // ~3s
+      autoAdvanceFrames: 180,            // ~3s
       freeTurrets: true,
+      randomSeedCount: 4,
+      randomGrantFrames: 600,
+      randomKillsPerGrant: 5,
       // Random-infinite borrows endless-normal's escalation curve.
       scaling: {
         speed: 0.035, hp: 0.15,
@@ -327,6 +333,9 @@
     elapsedMs: 0,
     nextWaveCountdown: 0,
     nextRandomTurret: "close",
+    turretQueue: 0,
+    framesSinceGrant: 0,
+    killsSinceGrant: 0,
     leaderboards: {
       "daily": [],
       "endless-easy": [],
@@ -437,10 +446,11 @@
   function updateHUD() {
     const cfg = MODES[state.mode];
     elLives.textContent = state.lives;
-    elMoney.textContent = cfg && cfg.freeTurrets ? "—" : state.money;
+    elMoney.textContent = cfg && cfg.freeTurrets ? state.turretQueue : state.money;
     elWave.textContent = state.wave;
     elScore.textContent = state.score;
     syncTurretButtons();
+    syncRandomNext();
     elStartWave.disabled = state.waveActive || state.gameOver;
     if (state.gameOver) {
       elStartWave.textContent = state.won ? "Run complete" : "Game over";
@@ -512,11 +522,14 @@
     if (state.turrets.some(tr => tr.x === cell.x && tr.y === cell.y)) return;
     const cfg = MODES[state.mode];
     const isRandom = cfg && cfg.freeTurrets;
+    if (isRandom && state.turretQueue <= 0) return;
     const type = isRandom ? state.nextRandomTurret : state.selectedTurret;
     const t = TURRETS[type];
     if (!isRandom) {
       if (state.money < t.cost) return;
       state.money -= t.cost;
+    } else {
+      state.turretQueue -= 1;
     }
     state.turrets.push({
       x: cell.x, y: cell.y, type,
@@ -662,6 +675,15 @@
       state.money += e.bounty;
       state.score += Math.round(e.maxHp);
       awardXp(e, killer);
+      // Random mode: kills feed the turret queue.
+      const cfg = MODES[state.mode];
+      if (cfg && cfg.freeTurrets) {
+        state.killsSinceGrant += 1;
+        while (state.killsSinceGrant >= cfg.randomKillsPerGrant) {
+          state.killsSinceGrant -= cfg.randomKillsPerGrant;
+          state.turretQueue += 1;
+        }
+      }
     }
   }
 
@@ -719,6 +741,16 @@
     } else if (state.nextWaveCountdown > 0 && !state.gameOver) {
       state.nextWaveCountdown -= 1;
       if (state.nextWaveCountdown <= 0) startWave();
+    }
+
+    // Random mode: time-based turret grants (always tick, even between waves).
+    const modeCfg = MODES[state.mode];
+    if (modeCfg && modeCfg.freeTurrets && !state.gameOver) {
+      state.framesSinceGrant += 1;
+      while (state.framesSinceGrant >= modeCfg.randomGrantFrames) {
+        state.framesSinceGrant -= modeCfg.randomGrantFrames;
+        state.turretQueue += 1;
+      }
     }
 
     stepTurrets();
@@ -851,7 +883,16 @@
     state.nextWaveCountdown = 0;
     state.startedAt = 0;
     state.elapsedMs = 0;
-    if (cfg.freeTurrets) rollNextTurret();
+    if (cfg.freeTurrets) {
+      state.turretQueue = cfg.randomSeedCount || 0;
+      state.framesSinceGrant = 0;
+      state.killsSinceGrant = 0;
+      rollNextTurret();
+    } else {
+      state.turretQueue = 0;
+      state.framesSinceGrant = 0;
+      state.killsSinceGrant = 0;
+    }
     syncRandomNext();
   }
 
@@ -911,12 +952,29 @@
     if (elRandomNext) elRandomNext.classList.toggle("hidden", !isRandom);
     if (elTurretGrid) elTurretGrid.classList.toggle("hidden", isRandom);
     if (!isRandom) return;
+
+    const queue = state.turretQueue;
+    const hasNext = queue > 0;
     const t = TURRETS[state.nextRandomTurret];
     if (!t) return;
-    elRandomNextSwatch.style.background = t.color;
-    elRandomNextName.textContent = t.name;
+
+    elRandomNextSwatch.style.background = hasNext ? t.color : "#3a4060";
+    elRandomNextName.textContent = hasNext ? t.name : "Queue empty";
+    elRandomNextSwatch.style.opacity = hasNext ? "1" : "0.55";
+
+    const secsToGrant = Math.max(
+      0,
+      Math.ceil((cfg.randomGrantFrames - state.framesSinceGrant) / 60),
+    );
+    const killsToGrant = Math.max(
+      0,
+      cfg.randomKillsPerGrant - state.killsSinceGrant,
+    );
     elRandomNextMeta.textContent =
-      `rng ${t.range.toFixed(1)} · dmg ${t.damage}${t.splash ? " · splash" : ""}`;
+      `queue ${queue} · next in ${secsToGrant}s or ${killsToGrant} kill${killsToGrant === 1 ? "" : "s"}`;
+    document.getElementById("random-next-label").textContent = hasNext
+      ? "Next turret — tap a cell to place"
+      : "Waiting for next turret…";
   }
 
   function applyModeAndRefresh() {
