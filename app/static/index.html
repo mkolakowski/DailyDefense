@@ -33,6 +33,16 @@
       <div class="card">
         <h2 id="overlay-title">Daily Defense</h2>
         <p id="overlay-body">Defend the points. Tap a cell to place the selected turret.</p>
+        <div id="mode-picker" class="mode-picker">
+          <button type="button" id="mode-daily" class="mode-btn selected" data-mode="daily">
+            <strong>Daily</strong>
+            <small>12 waves · today's map</small>
+          </button>
+          <button type="button" id="mode-endless" class="mode-btn" data-mode="endless">
+            <strong>Endless</strong>
+            <small>$300 to start · waves never stop</small>
+          </button>
+        </div>
         <div class="overlay-actions">
           <button type="button" id="overlay-start" class="primary">Start</button>
           <button type="button" id="overlay-submit" class="primary hidden">Submit Score</button>

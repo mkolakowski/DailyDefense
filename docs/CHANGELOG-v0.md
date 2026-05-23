@@ -4,6 +4,20 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-05-23
+
+### Added
+- **Endless mode.** A new game mode picker on the start overlay:
+  - **Daily** — unchanged: 12 waves on today's seeded map, $120 to start.
+  - **Endless** — **$300 to start**, **no wave cap**, and waves **auto-advance with a 3-second countdown** once the previous wave is cleared. Enemy speed multiplies by `1 + (wave-1) × 0.035` per wave, HP grows at `1 + (wave-1) × 0.15`, spawn spacing tightens, and there are more enemies per wave. Goal: highest score / longest survival.
+  - The HUD's mode label shows `· Endless · 1m 23s` (elapsed survival time) for endless runs; for daily runs it still shows the date.
+  - The Start Wave button doubles as a "skip countdown" button during the endless auto-advance window.
+- **Per-mode leaderboards.** `/api/scores` and the storage layer now accept a `mode` parameter (`daily` or `endless`). Daily and endless scores have separate top-N lists for the same date. Legacy `{date: [scores]}` rows from before 0.7.0 are migrated into the `daily` bucket on read.
+
+### Changed
+- `applyModeDefaults()` was split out of `resetRun()` so switching modes on the start overlay re-applies the right starting money/lives immediately (you can preview what you're getting before clicking Start).
+- `state.leaderboard` → `state.leaderboards.{daily,endless}` so both lists can be cached client-side and rendered without an extra round-trip when toggling modes.
+
 ## [0.6.0] — 2026-05-23
 
 ### Added

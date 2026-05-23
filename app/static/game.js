@@ -3,8 +3,25 @@
 
   const GRID_W = 10;
   const GRID_H = 20;
-  const STARTING_MONEY = 120;
-  const STARTING_LIVES = 20;
+
+  const MODES = {
+    daily: {
+      label: "Daily",
+      startMoney: 120,
+      startLives: 20,
+      maxWave: 12,
+      autoAdvance: false,
+    },
+    endless: {
+      label: "Endless",
+      startMoney: 300,
+      startLives: 20,
+      maxWave: Infinity,
+      autoAdvance: true,
+      autoAdvanceFrames: 180, // ~3s at 60fps
+    },
+  };
+  const STARTING_LIVES = 20; // referenced in legacy spots, kept as fallback
 
   const TURRETS = {
     close:  { name: "Close",  cost: 30, range: 1.6, damage: 8,  cooldown: 18, color: "#7ad0ff", splash: 0,   key: "1" },
@@ -188,10 +205,21 @@
   }
 
   // --- Wave definition ------------------------------------------------------
-  function waveSpec(n) {
-    const runners = 6 + Math.floor(n * 3.5);
-    const tanks = Math.max(0, Math.floor((n - 1) * 0.7));
-    const spacing = Math.max(18, 50 - n * 2);
+  function waveSpec(n, mode) {
+    let runners, tanks, spacing, hpMult, speedMult;
+    if (mode === "endless") {
+      runners = 5 + Math.floor(n * 4);
+      tanks = Math.floor(n * 1.2);
+      spacing = Math.max(5, 38 - n * 1.2);
+      hpMult = 1 + (n - 1) * 0.15;
+      speedMult = 1 + (n - 1) * 0.035;
+    } else {
+      runners = 6 + Math.floor(n * 3.5);
+      tanks = Math.max(0, Math.floor((n - 1) * 0.7));
+      spacing = Math.max(18, 50 - n * 2);
+      hpMult = 1 + (n - 1) * 0.18;
+      speedMult = 1;
+    }
     const list = [];
     for (let i = 0; i < runners; i++) list.push("runner");
     for (let i = 0; i < tanks; i++) list.push("tank");
@@ -199,28 +227,34 @@
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
     }
-    return { types: list, spacing, hpMult: 1 + (n - 1) * 0.18 };
+    return { types: list, spacing, hpMult, speedMult };
   }
 
   // --- Game state -----------------------------------------------------------
   const state = {
+    mode: "daily",
     map: null,
     selectedTurret: "close",
     turrets: [],
     enemies: [],
     projectiles: [],
-    money: STARTING_MONEY,
+    money: 0,
     lives: STARTING_LIVES,
     wave: 0,
     score: 0,
     spawnQueue: [],
     spawnTimer: 0,
+    spawnSpacing: 0,
     waveActive: false,
     running: false,
     gameOver: false,
     won: false,
     dailyDate: null,
     tick: 0,
+    startedAt: 0,
+    elapsedMs: 0,
+    nextWaveCountdown: 0,
+    leaderboards: { daily: [], endless: [] },
   };
 
   // --- DOM ------------------------------------------------------------------
@@ -241,6 +275,8 @@
   const elOverlaySubmit = document.getElementById("overlay-submit");
   const elOverlayLB = document.getElementById("overlay-leaderboard");
   const elAppVersion = document.getElementById("app-version");
+  const elModePicker = document.getElementById("mode-picker");
+  const elModeButtons = Array.from(document.querySelectorAll(".mode-btn"));
 
   // --- Robust button activator --------------------------------------------
   // iOS Safari sometimes swallows `click` events on dynamically toggled
@@ -303,6 +339,13 @@
     }
   }
 
+  function formatElapsed(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  }
+
   function updateHUD() {
     elLives.textContent = state.lives;
     elMoney.textContent = state.money;
@@ -310,9 +353,28 @@
     elScore.textContent = state.score;
     syncTurretButtons();
     elStartWave.disabled = state.waveActive || state.gameOver;
-    elStartWave.textContent = state.gameOver
-      ? (state.won ? "Run complete" : "Game over")
-      : (state.wave === 0 ? "Start Wave 1" : `Start Wave ${state.wave + 1}`);
+    if (state.gameOver) {
+      elStartWave.textContent = state.won ? "Run complete" : "Game over";
+    } else if (state.nextWaveCountdown > 0) {
+      const s = Math.ceil(state.nextWaveCountdown / 60);
+      elStartWave.textContent = `Wave ${state.wave + 1} in ${s}s — skip?`;
+      elStartWave.disabled = false;
+    } else {
+      elStartWave.textContent = state.wave === 0
+        ? "Start Wave 1"
+        : `Start Wave ${state.wave + 1}`;
+    }
+    updateModeLabel();
+  }
+
+  function updateModeLabel() {
+    if (state.mode === "endless") {
+      elDaily.textContent = `· Endless · ${formatElapsed(state.elapsedMs)}`;
+    } else if (state.dailyDate) {
+      elDaily.textContent = `· daily ${state.dailyDate}`;
+    } else {
+      elDaily.textContent = "";
+    }
   }
 
   // --- Canvas sizing & input -----------------------------------------------
@@ -373,15 +435,19 @@
   function startWave() {
     if (state.waveActive || state.gameOver || !state.map) return;
     state.wave += 1;
-    const spec = waveSpec(state.wave);
-    state.spawnQueue = spec.types.map(type => ({ type, hpMult: spec.hpMult }));
+    const spec = waveSpec(state.wave, state.mode);
+    state.spawnQueue = spec.types.map(type => ({
+      type, hpMult: spec.hpMult, speedMult: spec.speedMult,
+    }));
     state.spawnTimer = 0;
     state.spawnSpacing = spec.spacing;
     state.waveActive = true;
+    state.nextWaveCountdown = 0;
+    if (state.startedAt === 0) state.startedAt = Date.now();
     updateHUD();
   }
 
-  function spawnEnemy(type, hpMult) {
+  function spawnEnemy(type, hpMult, speedMult) {
     const path = pick(Math.random, state.map.paths);
     const def = ENEMIES[type];
     state.enemies.push({
@@ -393,7 +459,7 @@
       y: path.cells[0].y,
       hp: def.hp * hpMult,
       maxHp: def.hp * hpMult,
-      speed: def.speed,
+      speed: def.speed * (speedMult || 1),
       bounty: def.bounty,
       dead: false,
     });
@@ -407,6 +473,7 @@
         e.t -= 1;
         e.idx += 1;
       }
+      // Defensive: never let interpolation read past the end of the path.
       const a = e.path.cells[e.idx];
       const b = e.path.cells[Math.min(e.idx + 1, e.path.cells.length - 1)];
       e.x = a.x + (b.x - a.x) * e.t;
@@ -521,14 +588,20 @@
   function gameLoop() {
     if (!state.running) return;
     state.tick += 1;
+    if (state.startedAt > 0 && !state.gameOver) {
+      state.elapsedMs = Date.now() - state.startedAt;
+    }
 
     if (state.waveActive) {
       state.spawnTimer -= 1;
       if (state.spawnTimer <= 0 && state.spawnQueue.length > 0) {
         const next = state.spawnQueue.shift();
-        spawnEnemy(next.type, next.hpMult);
+        spawnEnemy(next.type, next.hpMult, next.speedMult);
         state.spawnTimer = state.spawnSpacing;
       }
+    } else if (state.nextWaveCountdown > 0 && !state.gameOver) {
+      state.nextWaveCountdown -= 1;
+      if (state.nextWaveCountdown <= 0) startWave();
     }
 
     stepTurrets();
@@ -539,7 +612,12 @@
       state.waveActive = false;
       state.score += 25 * state.wave;
       state.money += 20 + state.wave * 2;
-      if (state.wave >= 12) endRun(true);
+      const cfg = MODES[state.mode];
+      if (state.wave >= cfg.maxWave) {
+        endRun(true);
+      } else if (cfg.autoAdvance) {
+        state.nextWaveCountdown = cfg.autoAdvanceFrames;
+      }
     }
 
     if (state.tick % 6 === 0) updateHUD();
@@ -627,24 +705,58 @@
   }
 
   // --- Lifecycle ------------------------------------------------------------
-  function resetRun() {
+  function applyModeDefaults() {
+    const cfg = MODES[state.mode];
     state.turrets = [];
     state.enemies = [];
     state.projectiles = [];
-    state.money = STARTING_MONEY;
-    state.lives = STARTING_LIVES;
+    state.money = cfg.startMoney;
+    state.lives = cfg.startLives;
     state.wave = 0;
     state.score = 0;
     state.waveActive = false;
     state.gameOver = false;
     state.won = false;
     state.spawnQueue = [];
+    state.nextWaveCountdown = 0;
+    state.startedAt = 0;
+    state.elapsedMs = 0;
+  }
+
+  function setMode(mode) {
+    if (!MODES[mode]) return;
+    state.mode = mode;
+    for (const el of elModeButtons) {
+      el.classList.toggle("selected", el.dataset.mode === mode);
+    }
+    // While the overlay is showing (pre-run), re-apply the mode's defaults.
+    applyModeDefaults();
+    renderLeaderboard(state.leaderboards[mode] || []);
+    fetchScores(state.dailyDate, mode).then(data => {
+      state.leaderboards[mode] = data.scores || [];
+      if (!state.gameOver) renderLeaderboard(state.leaderboards[mode]);
+    });
+    updateModeBody();
+    updateHUD();
+  }
+
+  function updateModeBody() {
+    elOverlayBody.textContent = state.mode === "endless"
+      ? "Endless mode: $300 to start, waves never stop and get faster. Survive as long as you can."
+      : "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.";
+  }
+
+  function resetRun() {
+    applyModeDefaults();
     showOverlay({
       title: "Daily Defense",
-      body: "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.",
+      body: state.mode === "endless"
+        ? "Endless mode: $300 to start, waves never stop and get faster. Survive as long as you can."
+        : "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.",
       startVisible: true,
       submitVisible: false,
-      leaderboard: state.leaderboard,
+      pickerVisible: true,
+      leaderboard: state.leaderboards[state.mode] || [],
     });
     updateHUD();
   }
@@ -653,21 +765,30 @@
     state.gameOver = true;
     state.won = won;
     state.waveActive = false;
+    state.nextWaveCountdown = 0;
+    const isEndless = state.mode === "endless";
+    const body = isEndless
+      ? `Survived ${formatElapsed(state.elapsedMs)} · wave ${state.wave} · score ${state.score}.`
+      : `Final score: ${state.score}.`;
     showOverlay({
       title: won ? "Defended!" : "Defenses fell",
-      body: `Final score: ${state.score}.`,
+      body,
       startVisible: false,
       submitVisible: true,
-      leaderboard: state.leaderboard,
+      pickerVisible: false,
+      leaderboard: state.leaderboards[state.mode] || [],
     });
     updateHUD();
   }
 
-  function showOverlay({ title, body, startVisible, submitVisible, leaderboard }) {
+  function showOverlay({ title, body, startVisible, submitVisible, pickerVisible, leaderboard }) {
     elOverlayTitle.textContent = title;
     elOverlayBody.textContent = body;
     elOverlayStart.classList.toggle("hidden", !startVisible);
     elOverlaySubmit.classList.toggle("hidden", !submitVisible);
+    if (elModePicker) elModePicker.classList.toggle("hidden", !pickerVisible);
+    elOverlaySubmit.disabled = false;
+    elOverlaySubmit.textContent = "Submit Score";
     renderLeaderboard(leaderboard || []);
     elOverlay.classList.remove("hidden");
   }
@@ -687,13 +808,16 @@
   activate(elOverlaySubmit, () => submitScore());
   activate(elStartWave, () => startWave());
   activate(elReset, () => resetRun());
+  for (const btn of elModeButtons) {
+    activate(btn, () => setMode(btn.dataset.mode));
+  }
 
   async function fetchDaily() {
     const r = await fetch("/api/daily");
     return r.json();
   }
-  async function fetchScores(date) {
-    const r = await fetch(`/api/scores?date=${encodeURIComponent(date)}`);
+  async function fetchScores(date, mode = "daily") {
+    const r = await fetch(`/api/scores?date=${encodeURIComponent(date)}&mode=${encodeURIComponent(mode)}`);
     return r.json();
   }
   async function submitScore() {
@@ -701,12 +825,17 @@
     const r = await fetch("/api/scores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: state.dailyDate, name, score: state.score }),
+      body: JSON.stringify({
+        date: state.dailyDate,
+        mode: state.mode,
+        name,
+        score: state.score,
+      }),
     });
     if (r.ok) {
       const data = await r.json();
-      state.leaderboard = data.top || [];
-      renderLeaderboard(state.leaderboard);
+      state.leaderboards[state.mode] = data.top || [];
+      renderLeaderboard(state.leaderboards[state.mode]);
       elOverlaySubmit.disabled = true;
       elOverlaySubmit.textContent = data.rank ? `Submitted (rank #${data.rank})` : "Submitted";
     } else {
@@ -728,9 +857,14 @@
     const [daily, version] = await Promise.all([fetchDaily(), fetchVersion()]);
     state.dailyDate = daily.date;
     state.map = generateMap(daily.seed);
-    elDaily.textContent = `· daily ${daily.date}`;
-    const scores = await fetchScores(daily.date);
-    state.leaderboard = scores.scores || [];
+
+    // Pre-fetch both leaderboards in parallel.
+    const [dailyScores, endlessScores] = await Promise.all([
+      fetchScores(daily.date, "daily"),
+      fetchScores(daily.date, "endless"),
+    ]);
+    state.leaderboards.daily = dailyScores.scores || [];
+    state.leaderboards.endless = endlessScores.scores || [];
 
     elAppVersion.textContent = `v${version}`;
     buildTurretButtons();
