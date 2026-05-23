@@ -4,6 +4,23 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-05-23
+
+### Added
+- **Endless difficulties.** Three tiers, each with its own starting money, lives, scaling, and auto-advance cadence:
+  | Difficulty | Start $ | Lives | Speed/wave | HP/wave | Auto-advance |
+  |------------|---------|-------|------------|---------|--------------|
+  | Easy       | $400    | 25    | +2.5 %     | +12 %   | 4 s          |
+  | Normal     | $300    | 20    | +3.5 %     | +15 %   | 3 s          |
+  | Hard       | $200    | 15    | +5.0 %     | +20 %   | 2 s          |
+  Each also tightens spawn spacing and increases enemies-per-wave more aggressively.
+- The mode picker now reveals a three-button difficulty selector when Endless is chosen.
+- Each difficulty has its own leaderboard. New mode keys: `endless-easy`, `endless-normal`, `endless-hard`.
+- `_normalized()` migrates any v0.7.0 `endless` rows into `endless-normal` on first read so no scores are lost.
+
+### Changed
+- `MODES` table now drives scaling — `waveSpec()` reads `cfg.scaling` instead of hard-coding numbers per mode. Adding a new difficulty or tweaking one is a single-row change.
+
 ## [0.7.0] — 2026-05-23
 
 ### Added

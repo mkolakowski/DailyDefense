@@ -7,21 +7,59 @@
   const MODES = {
     daily: {
       label: "Daily",
+      family: "daily",
       startMoney: 120,
       startLives: 20,
       maxWave: 12,
       autoAdvance: false,
     },
-    endless: {
-      label: "Endless",
+    "endless-easy": {
+      label: "Endless · Easy",
+      family: "endless",
+      difficulty: "easy",
+      startMoney: 400,
+      startLives: 25,
+      maxWave: Infinity,
+      autoAdvance: true,
+      autoAdvanceFrames: 240,           // ~4s
+      scaling: {
+        speed: 0.025, hp: 0.12,
+        spacingBase: 45, spacingDecay: 1.0, spacingMin: 8,
+        runnersBase: 4, runnersPerWave: 3, tanksPerWave: 0.8,
+      },
+    },
+    "endless-normal": {
+      label: "Endless · Normal",
+      family: "endless",
+      difficulty: "normal",
       startMoney: 300,
       startLives: 20,
       maxWave: Infinity,
       autoAdvance: true,
-      autoAdvanceFrames: 180, // ~3s at 60fps
+      autoAdvanceFrames: 180,           // ~3s
+      scaling: {
+        speed: 0.035, hp: 0.15,
+        spacingBase: 38, spacingDecay: 1.2, spacingMin: 5,
+        runnersBase: 5, runnersPerWave: 4, tanksPerWave: 1.2,
+      },
+    },
+    "endless-hard": {
+      label: "Endless · Hard",
+      family: "endless",
+      difficulty: "hard",
+      startMoney: 200,
+      startLives: 15,
+      maxWave: Infinity,
+      autoAdvance: true,
+      autoAdvanceFrames: 120,           // ~2s
+      scaling: {
+        speed: 0.050, hp: 0.20,
+        spacingBase: 32, spacingDecay: 1.4, spacingMin: 3,
+        runnersBase: 6, runnersPerWave: 5, tanksPerWave: 1.6,
+      },
     },
   };
-  const STARTING_LIVES = 20; // referenced in legacy spots, kept as fallback
+  const STARTING_LIVES = 20; // legacy fallback
 
   const TURRETS = {
     close:  { name: "Close",  cost: 30, range: 1.6, damage: 8,  cooldown: 18, color: "#7ad0ff", splash: 0,   key: "1" },
@@ -206,13 +244,15 @@
 
   // --- Wave definition ------------------------------------------------------
   function waveSpec(n, mode) {
+    const cfg = MODES[mode] || MODES.daily;
     let runners, tanks, spacing, hpMult, speedMult;
-    if (mode === "endless") {
-      runners = 5 + Math.floor(n * 4);
-      tanks = Math.floor(n * 1.2);
-      spacing = Math.max(5, 38 - n * 1.2);
-      hpMult = 1 + (n - 1) * 0.15;
-      speedMult = 1 + (n - 1) * 0.035;
+    if (cfg.family === "endless") {
+      const s = cfg.scaling;
+      runners = s.runnersBase + Math.floor(n * s.runnersPerWave);
+      tanks = Math.floor(n * s.tanksPerWave);
+      spacing = Math.max(s.spacingMin, s.spacingBase - n * s.spacingDecay);
+      hpMult = 1 + (n - 1) * s.hp;
+      speedMult = 1 + (n - 1) * s.speed;
     } else {
       runners = 6 + Math.floor(n * 3.5);
       tanks = Math.max(0, Math.floor((n - 1) * 0.7));
@@ -254,7 +294,12 @@
     startedAt: 0,
     elapsedMs: 0,
     nextWaveCountdown: 0,
-    leaderboards: { daily: [], endless: [] },
+    leaderboards: {
+      "daily": [],
+      "endless-easy": [],
+      "endless-normal": [],
+      "endless-hard": [],
+    },
   };
 
   // --- DOM ------------------------------------------------------------------
@@ -277,6 +322,8 @@
   const elAppVersion = document.getElementById("app-version");
   const elModePicker = document.getElementById("mode-picker");
   const elModeButtons = Array.from(document.querySelectorAll(".mode-btn"));
+  const elDifficultyPicker = document.getElementById("difficulty-picker");
+  const elDifficultyButtons = Array.from(document.querySelectorAll(".diff-btn"));
 
   // --- Robust button activator --------------------------------------------
   // iOS Safari sometimes swallows `click` events on dynamically toggled
@@ -368,8 +415,9 @@
   }
 
   function updateModeLabel() {
-    if (state.mode === "endless") {
-      elDaily.textContent = `· Endless · ${formatElapsed(state.elapsedMs)}`;
+    const cfg = MODES[state.mode];
+    if (cfg && cfg.family === "endless") {
+      elDaily.textContent = `· ${cfg.label} · ${formatElapsed(state.elapsedMs)}`;
     } else if (state.dailyDate) {
       elDaily.textContent = `· daily ${state.dailyDate}`;
     } else {
@@ -723,15 +771,42 @@
     state.elapsedMs = 0;
   }
 
-  function setMode(mode) {
+  // Family ("daily" | "endless") and difficulty ("easy" | "normal" | "hard")
+  // resolve to a single mode key like "endless-normal" used everywhere else.
+  let pickerDifficulty = "normal";
+  function modeKeyFor(family, difficulty) {
+    return family === "daily" ? "daily" : `endless-${difficulty}`;
+  }
+
+  function setFamily(family) {
+    const mode = modeKeyFor(family, pickerDifficulty);
     if (!MODES[mode]) return;
     state.mode = mode;
     for (const el of elModeButtons) {
-      el.classList.toggle("selected", el.dataset.mode === mode);
+      el.classList.toggle("selected", el.dataset.family === family);
     }
-    // While the overlay is showing (pre-run), re-apply the mode's defaults.
+    if (elDifficultyPicker) {
+      elDifficultyPicker.classList.toggle("hidden", family !== "endless");
+    }
+    applyModeAndRefresh();
+  }
+
+  function setDifficulty(difficulty) {
+    pickerDifficulty = difficulty;
+    for (const el of elDifficultyButtons) {
+      el.classList.toggle("selected", el.dataset.difficulty === difficulty);
+    }
+    if (MODES[state.mode] && MODES[state.mode].family === "endless") {
+      state.mode = modeKeyFor("endless", difficulty);
+      applyModeAndRefresh();
+    }
+  }
+
+  function applyModeAndRefresh() {
+    const mode = state.mode;
     applyModeDefaults();
-    renderLeaderboard(state.leaderboards[mode] || []);
+    state.leaderboards[mode] = state.leaderboards[mode] || [];
+    renderLeaderboard(state.leaderboards[mode]);
     fetchScores(state.dailyDate, mode).then(data => {
       state.leaderboards[mode] = data.scores || [];
       if (!state.gameOver) renderLeaderboard(state.leaderboards[mode]);
@@ -741,23 +816,28 @@
   }
 
   function updateModeBody() {
-    elOverlayBody.textContent = state.mode === "endless"
-      ? "Endless mode: $300 to start, waves never stop and get faster. Survive as long as you can."
-      : "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.";
+    const cfg = MODES[state.mode];
+    if (cfg && cfg.family === "endless") {
+      elOverlayBody.textContent =
+        `${cfg.label}: $${cfg.startMoney} to start, ${cfg.startLives} lives. ` +
+        "Waves never stop and get faster. Survive as long as you can.";
+    } else {
+      elOverlayBody.textContent =
+        "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.";
+    }
   }
 
   function resetRun() {
     applyModeDefaults();
     showOverlay({
       title: "Daily Defense",
-      body: state.mode === "endless"
-        ? "Endless mode: $300 to start, waves never stop and get faster. Survive as long as you can."
-        : "Defend the points. Tap a cell to place the selected turret. Up to 12 waves.",
+      body: "",  // updateModeBody fills it in
       startVisible: true,
       submitVisible: false,
       pickerVisible: true,
       leaderboard: state.leaderboards[state.mode] || [],
     });
+    updateModeBody();
     updateHUD();
   }
 
@@ -766,7 +846,8 @@
     state.won = won;
     state.waveActive = false;
     state.nextWaveCountdown = 0;
-    const isEndless = state.mode === "endless";
+    const cfg = MODES[state.mode];
+    const isEndless = cfg && cfg.family === "endless";
     const body = isEndless
       ? `Survived ${formatElapsed(state.elapsedMs)} · wave ${state.wave} · score ${state.score}.`
       : `Final score: ${state.score}.`;
@@ -809,7 +890,10 @@
   activate(elStartWave, () => startWave());
   activate(elReset, () => resetRun());
   for (const btn of elModeButtons) {
-    activate(btn, () => setMode(btn.dataset.mode));
+    activate(btn, () => setFamily(btn.dataset.family));
+  }
+  for (const btn of elDifficultyButtons) {
+    activate(btn, () => setDifficulty(btn.dataset.difficulty));
   }
 
   async function fetchDaily() {
@@ -858,13 +942,12 @@
     state.dailyDate = daily.date;
     state.map = generateMap(daily.seed);
 
-    // Pre-fetch both leaderboards in parallel.
-    const [dailyScores, endlessScores] = await Promise.all([
-      fetchScores(daily.date, "daily"),
-      fetchScores(daily.date, "endless"),
-    ]);
-    state.leaderboards.daily = dailyScores.scores || [];
-    state.leaderboards.endless = endlessScores.scores || [];
+    // Pre-fetch all leaderboards in parallel.
+    const modes = ["daily", "endless-easy", "endless-normal", "endless-hard"];
+    const results = await Promise.all(modes.map(m => fetchScores(daily.date, m)));
+    modes.forEach((m, i) => {
+      state.leaderboards[m] = results[i].scores || [];
+    });
 
     elAppVersion.textContent = `v${version}`;
     buildTurretButtons();

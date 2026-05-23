@@ -8,7 +8,7 @@ from pathlib import Path
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/app/data"))
 SCORES_FILE = DATA_DIR / "scores.json"
 
-VALID_MODES = ("daily", "endless")
+VALID_MODES = ("daily", "endless-easy", "endless-normal", "endless-hard")
 
 _lock = threading.Lock()
 
@@ -20,14 +20,25 @@ def _ensure_storage() -> None:
 
 
 def _normalized(raw: dict) -> dict[str, dict[str, list[dict]]]:
-    """Storage is `{date: {mode: [scores]}}`. Legacy `{date: [scores]}` rows
-    (from before v0.7.0) are migrated to the daily bucket on read."""
+    """Storage is `{date: {mode: [scores]}}`. Migrations applied on read:
+
+    - Legacy `{date: [scores]}` (pre-v0.7.0) -> daily bucket.
+    - Legacy `endless` bucket (v0.7.0) -> `endless-normal`.
+    """
     out: dict[str, dict[str, list[dict]]] = {}
     for date, entry in raw.items():
         if isinstance(entry, list):
             out[date] = {"daily": entry}
-        elif isinstance(entry, dict):
-            out[date] = {m: list(entry.get(m, [])) for m in VALID_MODES if m in entry}
+            continue
+        if not isinstance(entry, dict):
+            continue
+        bucket: dict[str, list[dict]] = {}
+        for m in VALID_MODES:
+            if m in entry:
+                bucket[m] = list(entry[m])
+        if "endless" in entry and "endless-normal" not in bucket:
+            bucket["endless-normal"] = list(entry["endless"])
+        out[date] = bucket
     return out
 
 

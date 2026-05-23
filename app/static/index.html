@@ -34,13 +34,24 @@
         <h2 id="overlay-title">Daily Defense</h2>
         <p id="overlay-body">Defend the points. Tap a cell to place the selected turret.</p>
         <div id="mode-picker" class="mode-picker">
-          <button type="button" id="mode-daily" class="mode-btn selected" data-mode="daily">
+          <button type="button" class="mode-btn selected" data-family="daily">
             <strong>Daily</strong>
             <small>12 waves · today's map</small>
           </button>
-          <button type="button" id="mode-endless" class="mode-btn" data-mode="endless">
+          <button type="button" class="mode-btn" data-family="endless">
             <strong>Endless</strong>
-            <small>$300 to start · waves never stop</small>
+            <small>survive — waves never stop</small>
+          </button>
+        </div>
+        <div id="difficulty-picker" class="difficulty-picker hidden">
+          <button type="button" class="diff-btn" data-difficulty="easy">
+            <strong>Easy</strong><small>$400 · 25 lives</small>
+          </button>
+          <button type="button" class="diff-btn selected" data-difficulty="normal">
+            <strong>Normal</strong><small>$300 · 20 lives</small>
+          </button>
+          <button type="button" class="diff-btn" data-difficulty="hard">
+            <strong>Hard</strong><small>$200 · 15 lives</small>
           </button>
         </div>
         <div class="overlay-actions">
