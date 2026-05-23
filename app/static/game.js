@@ -13,8 +13,8 @@
   };
 
   const ENEMIES = {
-    runner: { name: "Runner", hp: 22, speed: 0.035, color: "#8aff9e", bounty: 6,  size: 0.32 },
-    tank:   { name: "Tank",   hp: 90, speed: 0.015, color: "#ff6b8a", bounty: 14, size: 0.42 },
+    runner: { name: "Runner", hp: 22, speed: 0.018, color: "#8aff9e", bounty: 6,  size: 0.32 },
+    tank:   { name: "Tank",   hp: 90, speed: 0.008, color: "#ff6b8a", bounty: 14, size: 0.42 },
   };
 
   // --- Seeded PRNG (mulberry32) --------------------------------------------
@@ -228,16 +228,19 @@
     });
   }
 
-  function renderTurretButtons() {
+  // Turret buttons are built ONCE on first render and then we only toggle
+  // .selected / .unaffordable classes on the existing nodes. Rebuilding the
+  // DOM on every HUD tick (~10 Hz) was destroying the button between
+  // pointerdown and pointerup on iOS, so taps on Medium / AoE were silently
+  // dropped.
+  const turretButtonNodes = {};
+
+  function buildTurretButtons() {
     elTurretGrid.innerHTML = "";
     for (const [id, t] of Object.entries(TURRETS)) {
       const btn = document.createElement("button");
       btn.type = "button";
-      const affordable = state.money >= t.cost;
-      btn.className =
-        "turret-btn" +
-        (state.selectedTurret === id ? " selected" : "") +
-        (affordable ? "" : " unaffordable");
+      btn.className = "turret-btn";
       btn.dataset.turret = id;
       btn.innerHTML = `
         <span class="swatch" style="background:${t.color}"></span>
@@ -247,9 +250,20 @@
         </span>`;
       activate(btn, () => {
         state.selectedTurret = id;
-        renderTurretButtons();
+        syncTurretButtons();
       });
       elTurretGrid.appendChild(btn);
+      turretButtonNodes[id] = btn;
+    }
+    syncTurretButtons();
+  }
+
+  function syncTurretButtons() {
+    for (const [id, t] of Object.entries(TURRETS)) {
+      const btn = turretButtonNodes[id];
+      if (!btn) continue;
+      btn.classList.toggle("selected", state.selectedTurret === id);
+      btn.classList.toggle("unaffordable", state.money < t.cost);
     }
   }
 
@@ -258,7 +272,7 @@
     elMoney.textContent = state.money;
     elWave.textContent = state.wave;
     elScore.textContent = state.score;
-    renderTurretButtons();
+    syncTurretButtons();
     elStartWave.disabled = state.waveActive || state.gameOver;
     elStartWave.textContent = state.gameOver
       ? (state.won ? "Run complete" : "Game over")
@@ -634,6 +648,7 @@
     state.leaderboard = scores.scores || [];
 
     elAppVersion.textContent = `v${version}`;
+    buildTurretButtons();
     resizeCanvas();
     requestAnimationFrame(() => { resizeCanvas(); resetRun(); state.running = true; gameLoop(); });
   }
