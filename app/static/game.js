@@ -554,15 +554,25 @@
     }
   }
 
+  async function fetchVersion() {
+    try {
+      const r = await fetch("/health");
+      const data = await r.json();
+      return data.version || "?";
+    } catch {
+      return "?";
+    }
+  }
+
   async function init() {
-    const daily = await fetchDaily();
+    const [daily, version] = await Promise.all([fetchDaily(), fetchVersion()]);
     state.dailyDate = daily.date;
     state.map = generateMap(daily.seed);
     elDaily.textContent = `· daily ${daily.date}`;
     const scores = await fetchScores(daily.date);
     state.leaderboard = scores.scores || [];
 
-    elAppVersion.textContent = "0.3.0";
+    elAppVersion.textContent = version;
     resizeCanvas();
     requestAnimationFrame(() => { resizeCanvas(); resetRun(); state.running = true; gameLoop(); });
   }

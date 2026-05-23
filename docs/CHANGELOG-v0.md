@@ -4,6 +4,17 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-05-23
+
+### Fixed
+- **Overlay buttons on iOS Safari (and everywhere else).** The `.hidden` class was scoped only to the overlay container, so toggling `hidden` on `#overlay-start` / `#overlay-submit` did nothing — both buttons were always visible at the start of a run and at game over. Promoted `.hidden` to a global rule.
+- iOS hit area: bumped `button.primary` / `button.ghost` to `min-height: 44px` and increased padding to match the iOS Human Interface Guidelines tap target.
+- iOS quirks: added `touch-action: manipulation`, `-webkit-user-select: none`, `-webkit-touch-callout: none`, and `-webkit-appearance: none` to all interactive buttons. Prevents the long-press callout menu and the (vestigial) 300ms tap delay, and stops Safari from styling our buttons with its own appearance.
+
+### Changed
+- Pressed-state feedback (`:active`) now includes a brightness shift in addition to the 1px translate, so a tap is clearly registered even with `-webkit-tap-highlight-color: transparent`.
+- Footer version label now reads from `/health` instead of being hard-coded in `game.js`, so it stops drifting between releases.
+
 ## [0.4.0] — 2026-05-23
 
 ### Added

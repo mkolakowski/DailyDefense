@@ -14,6 +14,8 @@
 
 * { box-sizing: border-box; }
 
+.hidden { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -127,13 +129,24 @@ main {
 .turret-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .turret-btn:active { transform: translateY(1px); }
 
+button.primary, button.ghost, .turret-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
 button.primary, button.ghost {
   width: 100%;
+  min-height: 44px;
   font: inherit;
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
   border: 0;
+  transition: filter 80ms ease, transform 80ms ease, background-color 80ms ease;
 }
 button.primary {
   background: var(--accent);
@@ -147,7 +160,11 @@ button.ghost {
   border: 1px solid #ffffff22;
   margin-top: 8px;
 }
-button.primary:active, button.ghost:active { transform: translateY(1px); }
+button.primary:active:not(:disabled),
+button.ghost:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.92);
+}
 
 .hint { padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.4; margin: 0; }
 .hint li { margin-bottom: 4px; }
