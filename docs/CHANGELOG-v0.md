@@ -4,6 +4,18 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-05-23
+
+### Added — Material Design migration, phase 1 (foundations)
+- **MD3 system colour tokens** defined on `:root` as CSS custom properties: `--md-sys-color-primary`, `--md-sys-color-surface`, `--md-sys-color-surface-container-*`, `--md-sys-color-outline`, etc. The existing palette is mapped into the MD3 roles; the in-canvas game palette (cyan / yellow / magenta turrets) is untouched.
+- **MD3 elevation tokens** (`--md-sys-elevation-0` through `-5`) using the standard two-layer shadow recipe.
+- **Roboto** and **Roboto Mono** loaded from Google Fonts (`preconnect` + `display: swap`). System stack is the fallback if fonts are blocked. HUD stats now use Roboto Mono for tabular numerals.
+- Legacy `--accent`, `--panel`, `--ink` etc. tokens now alias to the MD3 tokens so existing CSS keeps working during the migration.
+
+### Changed
+- Mode picker and difficulty picker are now **MD3 segmented buttons** — a single rounded pill with connected segments, selected segment filled with secondary-container, MD3 state-layer hover/press tint. First proof of the new design system.
+- `docs/TODO.md` rewritten as a four-phase Material Design plan; phase 1 marked in progress.
+
 ## [0.8.0] — 2026-05-23
 
 ### Added
