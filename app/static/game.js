@@ -12,6 +12,42 @@
     aoe:    { name: "AoE",    cost: 75, range: 2.4, damage: 9,  cooldown: 60, color: "#ff8af0", splash: 1.4, key: "3" },
   };
 
+  // --- XP / leveling -------------------------------------------------------
+  // Diminishing-returns stat bonuses: bonus(L, cap) = cap * (1 - 0.8^(L-1)).
+  // L1 = 0 (base stats). Asymptote: every stat approaches its cap as L -> inf.
+  const XP_PER_HP        = 0.5;
+  const XP_KILL_SHARE    = 0.40;
+  const XP_CLOSEST_SHARE = 0.30;
+  const XP_SPLIT_SHARE   = 0.30;
+  const LEVEL_DECAY      = 0.8;
+  const LEVEL_CAPS = {
+    damage:   1.50,  // +150% max
+    range:    0.50,  // +50% max
+    cooldown: 0.60,  // -60% max (i.e. 2.5x fire rate at L∞)
+    splash:   0.50,  // +50% max (AoE only; harmless on non-AoE)
+  };
+
+  function levelBonus(level, cap) {
+    if (level <= 1) return 0;
+    return cap * (1 - Math.pow(LEVEL_DECAY, level - 1));
+  }
+
+  function xpToNext(level) {
+    return Math.floor(50 * Math.pow(1.5, level - 1));
+  }
+
+  function effectiveStats(turret) {
+    const base = TURRETS[turret.type];
+    const L = turret.level;
+    return {
+      damage:   base.damage   * (1 + levelBonus(L, LEVEL_CAPS.damage)),
+      range:    base.range    * (1 + levelBonus(L, LEVEL_CAPS.range)),
+      cooldown: base.cooldown * (1 - levelBonus(L, LEVEL_CAPS.cooldown)),
+      splash:   base.splash   * (1 + levelBonus(L, LEVEL_CAPS.splash)),
+      color:    base.color,
+    };
+  }
+
   const ENEMIES = {
     runner: { name: "Runner", hp: 22, speed: 0.018, color: "#8aff9e", bounty: 6,  size: 0.32 },
     tank:   { name: "Tank",   hp: 90, speed: 0.008, color: "#ff6b8a", bounty: 14, size: 0.42 },
@@ -307,7 +343,10 @@
     if (state.turrets.some(tr => tr.x === cell.x && tr.y === cell.y)) return;
     if (state.money < t.cost) return;
     state.money -= t.cost;
-    state.turrets.push({ x: cell.x, y: cell.y, type: state.selectedTurret, cd: 0 });
+    state.turrets.push({
+      x: cell.x, y: cell.y, type: state.selectedTurret,
+      cd: 0, xp: 0, level: 1,
+    });
     updateHUD();
   }
 
@@ -384,14 +423,14 @@
   function stepTurrets() {
     for (const tr of state.turrets) {
       if (tr.cd > 0) { tr.cd -= 1; continue; }
-      const def = TURRETS[tr.type];
+      const stats = effectiveStats(tr);
       let target = null;
       let bestProgress = -1;
       for (const e of state.enemies) {
         if (e.dead) continue;
         const dx = e.x - tr.x;
         const dy = e.y - tr.y;
-        if (dx * dx + dy * dy > def.range * def.range) continue;
+        if (dx * dx + dy * dy > stats.range * stats.range) continue;
         const progress = e.idx + e.t;
         if (progress > bestProgress) {
           bestProgress = progress;
@@ -402,10 +441,11 @@
         state.projectiles.push({
           x: tr.x + 0.5, y: tr.y + 0.5,
           tx: target.x + 0.5, ty: target.y + 0.5,
-          color: def.color, life: 6,
-          target, damage: def.damage, splash: def.splash,
+          color: stats.color, life: 6,
+          target, damage: stats.damage, splash: stats.splash,
+          from: tr,
         });
-        tr.cd = def.cooldown;
+        tr.cd = stats.cooldown;
       }
     }
   }
@@ -420,23 +460,60 @@
           const dx = e.x - (p.target.x);
           const dy = e.y - (p.target.y);
           if (dx * dx + dy * dy <= p.splash * p.splash) {
-            damageEnemy(e, p.damage);
+            damageEnemy(e, p.damage, p.from);
           }
         }
       } else if (!p.target.dead) {
-        damageEnemy(p.target, p.damage);
+        damageEnemy(p.target, p.damage, p.from);
       }
     }
     state.projectiles = state.projectiles.filter(p => p.life > 0);
   }
 
-  function damageEnemy(e, dmg) {
+  function damageEnemy(e, dmg, killer) {
     if (e.dead) return;
     e.hp -= dmg;
     if (e.hp <= 0) {
       e.dead = true;
       state.money += e.bounty;
       state.score += Math.round(e.maxHp);
+      awardXp(e, killer);
+    }
+  }
+
+  function awardXp(enemy, killer) {
+    const turrets = state.turrets;
+    if (turrets.length === 0) return;
+    const total = enemy.maxHp * XP_PER_HP;
+
+    // Find closest turret to the enemy's death position.
+    let closest = null;
+    let bestDist = Infinity;
+    for (const t of turrets) {
+      const dx = (t.x + 0.5) - enemy.x;
+      const dy = (t.y + 0.5) - enemy.y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; closest = t; }
+    }
+
+    const grants = new Map(turrets.map(t => [t, 0]));
+    if (killer && grants.has(killer)) {
+      grants.set(killer, grants.get(killer) + total * XP_KILL_SHARE);
+    }
+    if (closest) {
+      grants.set(closest, grants.get(closest) + total * XP_CLOSEST_SHARE);
+    }
+    const evenEach = total * XP_SPLIT_SHARE / turrets.length;
+    for (const t of turrets) grants.set(t, grants.get(t) + evenEach);
+
+    for (const [t, amount] of grants) addXp(t, amount);
+  }
+
+  function addXp(turret, amount) {
+    turret.xp += amount;
+    while (turret.xp >= xpToNext(turret.level)) {
+      turret.xp -= xpToNext(turret.level);
+      turret.level += 1;
     }
   }
 
@@ -506,13 +583,21 @@
 
     for (const tr of state.turrets) {
       const def = TURRETS[tr.type];
+      const cx = tr.x * cs + cs / 2;
+      const cy = tr.y * cs + cs / 2;
       ctx.fillStyle = def.color;
       ctx.beginPath();
-      ctx.arc(tr.x * cs + cs / 2, tr.y * cs + cs / 2, cs * 0.34, 0, Math.PI * 2);
+      ctx.arc(cx, cy, cs * 0.34, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = "#0008";
       ctx.lineWidth = 2;
       ctx.stroke();
+      // Level digit inside the turret. Dark ink on the bright fill, bold.
+      ctx.fillStyle = "#0b1020";
+      ctx.font = `700 ${Math.round(cs * 0.38)}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(tr.level), cx, cy + 1);
     }
 
     for (const e of state.enemies) {

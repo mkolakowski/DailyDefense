@@ -4,6 +4,20 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-05-23
+
+### Added
+- **Turret XP and leveling system.**
+  - Every enemy kill grants `XP = enemy.maxHp / 2`. The wave HP scaler means late-game kills are worth more XP.
+  - Split **40 % killer · 30 % closest turret · 30 % even across all turrets**. If closest is the killer, both shares stack.
+  - Unlimited levels. **XP to next level = `floor(50 × 1.5^(L−1))`** — 50, 75, 112, 168, 253, 380, 569 … so each level takes meaningfully longer.
+  - Per-level bonuses use a diminishing-returns formula `bonus(L, cap) = cap × (1 − 0.8^(L−1))`. Caps: **damage +150 %, range +50 %, cooldown −60 %, splash +50 %** (AoE only). L2 ≈ +20 % dmg / +6 % range / −12 % cd; L5 ≈ +59 / +18 / −36; L10 ≈ +87 / +27 / −53.
+  - The level digit is drawn inside the turret circle (bold dark ink on the bright fill).
+- New `effectiveStats(turret)` is the single source of truth for in-flight stats; the simulation no longer reads `TURRETS[type]` directly.
+
+### Changed
+- "How to play" hint updated to explain the XP system.
+
 ## [0.5.4] — 2026-05-23
 
 ### Added
