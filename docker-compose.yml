@@ -9,6 +9,8 @@ services:
       - "8014:8014"
     env_file:
       - .env
+    volumes:
+      - dailydefense-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8014/health"]
@@ -16,3 +18,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  dailydefense-data:

@@ -1,26 +1,20 @@
 # DailyDefense
 
-A Python application scaffold with Google SSO, ready to run via Docker Compose and to publish to the GitHub Container Registry.
+A daily tower-defense game in the browser. No sign-in required; everyone gets the same map each day and competes on a daily leaderboard.
 
 - **Port**: `8014`
-- **Stack**: Python 3.12, FastAPI, Uvicorn, Authlib
-- **Auth**: Google SSO (OpenID Connect)
+- **Stack**: Python 3.12, FastAPI, Uvicorn, vanilla JS + Canvas
+- **Auth**: Google SSO is scaffolded but **disabled by default** (`AUTH_ENABLED=false`)
 - **Container**: Docker / Docker Compose, GHCR-publishable
 
 ## Quick start
 
-1. Copy the env template and fill in values:
-   ```bash
-   cp .env.example .env
-   ```
-   Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a strong `SESSION_SECRET`.
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
 
-2. Build and run with Docker Compose:
-   ```bash
-   docker compose up --build
-   ```
-
-3. Open <http://localhost:8014> and sign in with Google.
+Open <http://localhost:8014> on desktop or iOS Safari.
 
 ### Local (without Docker)
 
@@ -31,17 +25,39 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8014 --reload
 ```
 
+## Gameplay
+
+- **Grid**: 10 wide × 20 tall.
+- **Map**: 1–6 enemy paths, 1–2 defense points. Deterministic per UTC day.
+- **Turrets** (cannot be placed on path cells):
+  - **Close** — short range, high DPS.
+  - **Medium** — long range, single target.
+  - **AoE** — splash damage on impact.
+- **Enemies**:
+  - **Runner** — fast, low HP.
+  - **Tank** — slow, high HP.
+- **Lives** drop when an enemy reaches a defense point. Survive 12 waves to win.
+- **Scores** are submitted to the daily leaderboard at `/api/scores`.
+
+Keyboard: `1`/`2`/`3` select turret · `N` next wave · `R` reset.
+
 ## Project layout
 
 ```
 DailyDefense/
-├── app/                 # FastAPI application
-│   ├── main.py
-│   ├── config.py
-│   ├── auth.py          # Google SSO
-│   └── routes/
-├── docs/                # Changelogs and docs
-├── .github/workflows/   # GHCR publish workflow
+├── app/
+│   ├── main.py          # FastAPI: mounts /static, routes
+│   ├── config.py        # pydantic-settings
+│   ├── auth.py          # Google SSO (gated by AUTH_ENABLED)
+│   ├── routes/
+│   │   ├── health.py
+│   │   └── game.py      # /api/daily, /api/scores
+│   ├── game/
+│   │   ├── daily.py     # date-seeded daily payload
+│   │   └── scores.py    # JSON-backed score store (volume)
+│   └── static/          # index.html, game.js, style.css
+├── docs/                # per-major changelogs
+├── .github/workflows/   # GHCR publish
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -54,7 +70,7 @@ DailyDefense/
 
 - Semantic versioning (`MAJOR.MINOR.PATCH`), bumped per feature or bugfix.
 - Each major version has its own changelog under `docs/CHANGELOG-vN.md`.
-- Every version change is committed and pushed.
+- Every version change is committed, pushed, and the app is restarted via `docker compose up --build -d`.
 
 ## Container image
 

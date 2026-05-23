@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0b1020" />
+<title>DailyDefense</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header class="hud">
+  <div class="hud-left">
+    <strong>DailyDefense</strong>
+    <span id="daily-label" class="muted"></span>
+  </div>
+  <div class="hud-stats">
+    <span title="Lives">❤ <b id="stat-lives">0</b></span>
+    <span title="Money">$ <b id="stat-money">0</b></span>
+    <span title="Wave">W <b id="stat-wave">0</b></span>
+    <span title="Score">⌬ <b id="stat-score">0</b></span>
+  </div>
+</header>
+
+<main>
+  <div class="stage">
+    <canvas id="board" width="320" height="640" aria-label="Tower defense board"></canvas>
+    <div id="overlay" class="overlay hidden">
+      <div class="card">
+        <h2 id="overlay-title">Daily Defense</h2>
+        <p id="overlay-body">Defend the points. Tap a cell to place the selected turret.</p>
+        <div class="overlay-actions">
+          <button id="overlay-start" class="primary">Start</button>
+          <button id="overlay-submit" class="primary hidden">Submit Score</button>
+        </div>
+        <div id="overlay-leaderboard" class="leaderboard"></div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <section class="shop">
+      <h3>Turrets</h3>
+      <div class="turret-grid" id="turret-grid"></div>
+      <button id="start-wave" class="primary">Start Wave</button>
+      <button id="reset-run" class="ghost">Reset</button>
+    </section>
+
+    <section class="info">
+      <h3>How to play</h3>
+      <ul class="hint">
+        <li>Tap or click a non-path cell to place the selected turret.</li>
+        <li>Two-finger pinch zoom is disabled — the board scales to fit.</li>
+        <li>Enemies pick a random path each spawn. Each map is the same for everyone today.</li>
+      </ul>
+    </section>
+  </aside>
+</main>
+
+<footer class="footer muted">
+  <span>v<span id="app-version">?</span></span>
+  <span>·</span>
+  <a href="/health" target="_blank" rel="noopener">health</a>
+</footer>
+
+<script src="/static/game.js" defer></script>
+</body>
+</html>

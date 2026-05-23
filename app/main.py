@@ -1,10 +1,14 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import __version__
 from app.auth import router as auth_router
 from app.config import get_settings
+from app.routes.game import router as game_router
 from app.routes.health import router as health_router
 
 settings = get_settings()
@@ -15,26 +19,15 @@ app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(game_router)
+
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> str:
-    if not settings.auth_enabled:
-        return (
-            "<h1>DailyDefense</h1>"
-            f"<p>Version {__version__}</p>"
-            "<p>Authentication is currently disabled. "
-            "Set <code>AUTH_ENABLED=true</code> in your <code>.env</code> to enable Google SSO.</p>"
-        )
-
-    user = request.session.get("user")
-    if user:
-        return (
-            "<h1>DailyDefense</h1>"
-            f"<p>Signed in as {user.get('email')}</p>"
-            "<a href='/auth/logout'>Logout</a>"
-        )
-    return "<h1>DailyDefense</h1><a href='/auth/login'>Sign in with Google</a>"
+@app.get("/", include_in_schema=False)
+async def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 if __name__ == "__main__":

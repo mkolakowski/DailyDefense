@@ -22,8 +22,11 @@ COPY app ./app
 COPY VERSION ./VERSION
 
 RUN useradd --create-home --shell /bin/bash appuser \
+    && mkdir -p /app/data \
     && chown -R appuser:appuser /app
 USER appuser
+
+VOLUME ["/app/data"]
 
 EXPOSE 8014
 
