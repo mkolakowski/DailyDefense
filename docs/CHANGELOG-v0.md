@@ -4,6 +4,11 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] — 2026-05-23
+
+### Changed
+- CLAUDE.md rule 12 rewritten to make it unambiguous: the application must be restarted via `docker compose up --build -d` after **every** version change (major, minor, or patch). Verification step (`/health` returns the new version) is now part of the rule.
+
 ## [0.4.2] — 2026-05-23
 
 ### Changed
