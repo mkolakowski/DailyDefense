@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     session_secret: str = "change-me"
 
+    auth_enabled: bool = False
+
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8014/auth/callback"

@@ -19,9 +19,21 @@ app.include_router(auth_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> str:
+    if not settings.auth_enabled:
+        return (
+            "<h1>DailyDefense</h1>"
+            f"<p>Version {__version__}</p>"
+            "<p>Authentication is currently disabled. "
+            "Set <code>AUTH_ENABLED=true</code> in your <code>.env</code> to enable Google SSO.</p>"
+        )
+
     user = request.session.get("user")
     if user:
-        return f"<h1>DailyDefense</h1><p>Signed in as {user.get('email')}</p><a href='/auth/logout'>Logout</a>"
+        return (
+            "<h1>DailyDefense</h1>"
+            f"<p>Signed in as {user.get('email')}</p>"
+            "<a href='/auth/logout'>Logout</a>"
+        )
     return "<h1>DailyDefense</h1><a href='/auth/login'>Sign in with Google</a>"
 
 
