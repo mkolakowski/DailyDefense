@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/mkolakowski/dailydefense:local
+    container_name: dailydefense
+    ports:
+      - "8014:8014"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8014/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
