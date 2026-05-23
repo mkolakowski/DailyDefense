@@ -44,7 +44,19 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
-.hud-left { display: flex; gap: 10px; align-items: baseline; }
+.hud-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.version-chip {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
 .hud-stats { display: flex; gap: 14px; font-variant-numeric: tabular-nums; }
 .hud-stats b { color: var(--accent); margin-left: 2px; }
 .muted { color: var(--muted); font-size: 12px; }

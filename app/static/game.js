@@ -572,7 +572,7 @@
     const scores = await fetchScores(daily.date);
     state.leaderboard = scores.scores || [];
 
-    elAppVersion.textContent = version;
+    elAppVersion.textContent = `v${version}`;
     resizeCanvas();
     requestAnimationFrame(() => { resizeCanvas(); resetRun(); state.running = true; gameLoop(); });
   }
