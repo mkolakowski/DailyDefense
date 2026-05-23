@@ -4,6 +4,12 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] — 2026-05-23
+
+### Fixed
+- **Start button unresponsive on iOS Safari.** Replaced raw `click` listeners on every interactive button (overlay Start/Submit, sidebar Start Wave/Reset, all turret buttons) with a new `activate()` helper that listens for both `click` and `pointerup` (touch/pen only, deduped within 350 ms). This works around a Safari quirk where the synthesized `click` is occasionally suppressed for elements inside an absolutely-positioned overlay layered over a canvas with active touch listeners.
+- Added explicit `type="button"` to all `<button>` elements so they never fall back to the implicit `submit` behaviour, even though there is no form on the page.
+
 ## [0.5.0] — 2026-05-23
 
 ### Added

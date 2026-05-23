@@ -171,10 +171,33 @@
   const elOverlayLB = document.getElementById("overlay-leaderboard");
   const elAppVersion = document.getElementById("app-version");
 
+  // --- Robust button activator --------------------------------------------
+  // iOS Safari sometimes swallows `click` events on dynamically toggled
+  // elements (especially inside an absolutely-positioned overlay that sits
+  // over a canvas with touch listeners). We listen for both `click` and
+  // `pointerup` and dedupe within a short window so the handler fires
+  // exactly once per tap on touch, mouse, and keyboard.
+  function activate(el, handler) {
+    if (el.type === "" || el.type === "submit") el.type = "button";
+    let triggered = 0;
+    const fire = (e) => {
+      if (el.disabled) return;
+      const now = Date.now();
+      if (now - triggered < 350) return;
+      triggered = now;
+      handler(e);
+    };
+    el.addEventListener("click", fire);
+    el.addEventListener("pointerup", (e) => {
+      if (e.pointerType === "touch" || e.pointerType === "pen") fire(e);
+    });
+  }
+
   function renderTurretButtons() {
     elTurretGrid.innerHTML = "";
     for (const [id, t] of Object.entries(TURRETS)) {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "turret-btn" + (state.selectedTurret === id ? " selected" : "");
       btn.dataset.turret = id;
       btn.innerHTML = `
@@ -184,7 +207,7 @@
           <small>rng ${t.range.toFixed(1)} · dmg ${t.damage}${t.splash ? " · splash" : ""} · key ${t.key}</small>
         </span>`;
       btn.disabled = state.money < t.cost;
-      btn.addEventListener("click", () => {
+      activate(btn, () => {
         state.selectedTurret = id;
         renderTurretButtons();
       });
@@ -523,10 +546,10 @@
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   }
 
-  elOverlayStart.addEventListener("click", () => { hideOverlay(); });
-  elOverlaySubmit.addEventListener("click", submitScore);
-  elStartWave.addEventListener("click", startWave);
-  elReset.addEventListener("click", resetRun);
+  activate(elOverlayStart, () => hideOverlay());
+  activate(elOverlaySubmit, () => submitScore());
+  activate(elStartWave, () => startWave());
+  activate(elReset, () => resetRun());
 
   async function fetchDaily() {
     const r = await fetch("/api/daily");
