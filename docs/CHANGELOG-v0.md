@@ -4,6 +4,12 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] — 2026-05-23
+
+### Added
+- `docs/TODO.md` — running list of open work items. First entry: refresh the UI to Material Design.
+- Link to TODO.md from `docs/README.md`.
+
 ## [0.4.3] — 2026-05-23
 
 ### Changed
