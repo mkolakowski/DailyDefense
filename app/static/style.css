@@ -138,6 +138,8 @@ main {
 .turret-btn .meta { display: flex; flex-direction: column; }
 .turret-btn .meta small { color: var(--muted); }
 .turret-btn.selected { border-color: var(--accent); }
+.turret-btn.unaffordable { opacity: 0.55; }
+.turret-btn.unaffordable .meta strong { color: var(--danger); }
 .turret-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .turret-btn:active { transform: translateY(1px); }
 

@@ -13,8 +13,8 @@
   };
 
   const ENEMIES = {
-    runner: { name: "Runner", hp: 22, speed: 0.06, color: "#8aff9e", bounty: 6,  size: 0.32 },
-    tank:   { name: "Tank",   hp: 90, speed: 0.025, color: "#ff6b8a", bounty: 14, size: 0.42 },
+    runner: { name: "Runner", hp: 22, speed: 0.035, color: "#8aff9e", bounty: 6,  size: 0.32 },
+    tank:   { name: "Tank",   hp: 90, speed: 0.015, color: "#ff6b8a", bounty: 14, size: 0.42 },
   };
 
   // --- Seeded PRNG (mulberry32) --------------------------------------------
@@ -83,37 +83,72 @@
     return { grid, defenses, paths, seed };
   }
 
+  // Biased random walk that never revisits cells, so consecutive entries are
+  // always 4-adjacent (no teleporting after dedupe — and no dedupe needed).
+  // Strong bias toward target with occasional perpendicular deviations.
   function walkPath(rng, start, end) {
     const cells = [{ ...start }];
+    const visited = new Set([`${start.x},${start.y}`]);
+    const key = (x, y) => `${x},${y}`;
     let cur = { ...start };
-    let safety = GRID_W * GRID_H * 4;
+    let safety = (GRID_W + GRID_H) * 6;
+
     while ((cur.x !== end.x || cur.y !== end.y) && safety-- > 0) {
       const dx = Math.sign(end.x - cur.x);
       const dy = Math.sign(end.y - cur.y);
-      const options = [];
-      if (dx !== 0) options.push({ x: cur.x + dx, y: cur.y }, { x: cur.x + dx, y: cur.y });
-      if (dy !== 0) options.push({ x: cur.x, y: cur.y + dy }, { x: cur.x, y: cur.y + dy });
-      if (cur.x > 0)          options.push({ x: cur.x - 1, y: cur.y });
-      if (cur.x < GRID_W - 1) options.push({ x: cur.x + 1, y: cur.y });
-      if (cur.y > 0)          options.push({ x: cur.x, y: cur.y - 1 });
-      if (cur.y < GRID_H - 1) options.push({ x: cur.x, y: cur.y + 1 });
-      cur = pick(rng, options);
+      const inBounds = (x, y) => x >= 0 && y >= 0 && x < GRID_W && y < GRID_H;
+      const opts = [];
+      const add = (x, y, w) => {
+        if (!inBounds(x, y) || visited.has(key(x, y))) return;
+        if (w > 0) opts.push({ x, y, w });
+      };
+      // Heavy weight on moves that close distance to the target.
+      if (dx !== 0) add(cur.x + dx, cur.y, 9);
+      if (dy !== 0) add(cur.x, cur.y + dy, 9);
+      // Light weight on perpendicular detours (only when not actively
+      // moving away from target).
+      if (dx === 0) {
+        add(cur.x - 1, cur.y, 2);
+        add(cur.x + 1, cur.y, 2);
+      }
+      if (dy === 0) {
+        add(cur.x, cur.y - 1, 2);
+        add(cur.x, cur.y + 1, 2);
+      }
+
+      if (opts.length === 0) {
+        // Boxed in by visited cells — accept any in-bounds neighbour even
+        // if visited, to escape the dead end. Prefer cells closer to target.
+        const fallback = [];
+        for (const [nx, ny] of [
+          [cur.x + 1, cur.y], [cur.x - 1, cur.y],
+          [cur.x, cur.y + 1], [cur.x, cur.y - 1],
+        ]) {
+          if (!inBounds(nx, ny)) continue;
+          const dist = Math.abs(nx - end.x) + Math.abs(ny - end.y);
+          fallback.push({ x: nx, y: ny, w: 1 / (1 + dist) });
+        }
+        if (fallback.length === 0) break;
+        cur = weightedPick(rng, fallback);
+      } else {
+        cur = weightedPick(rng, opts);
+      }
+      visited.add(key(cur.x, cur.y));
       cells.push({ ...cur });
     }
-    return dedupePath(cells);
+    return cells;
   }
 
-  function dedupePath(cells) {
-    const seen = new Set();
-    const out = [];
-    for (const c of cells) {
-      const k = `${c.x},${c.y}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push(c);
-      }
+  function weightedPick(rng, opts) {
+    let total = 0;
+    for (const o of opts) total += o.w;
+    let r = rng() * total;
+    for (const o of opts) {
+      r -= o.w;
+      if (r <= 0) return { x: o.x, y: o.y };
     }
-    return out;
+    const last = opts[opts.length - 1];
+    return { x: last.x, y: last.y };
   }
 
   // --- Wave definition ------------------------------------------------------
@@ -198,7 +233,11 @@
     for (const [id, t] of Object.entries(TURRETS)) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "turret-btn" + (state.selectedTurret === id ? " selected" : "");
+      const affordable = state.money >= t.cost;
+      btn.className =
+        "turret-btn" +
+        (state.selectedTurret === id ? " selected" : "") +
+        (affordable ? "" : " unaffordable");
       btn.dataset.turret = id;
       btn.innerHTML = `
         <span class="swatch" style="background:${t.color}"></span>
@@ -206,7 +245,6 @@
           <strong>${t.name} — $${t.cost}</strong>
           <small>rng ${t.range.toFixed(1)} · dmg ${t.damage}${t.splash ? " · splash" : ""} · key ${t.key}</small>
         </span>`;
-      btn.disabled = state.money < t.cost;
       activate(btn, () => {
         state.selectedTurret = id;
         renderTurretButtons();
