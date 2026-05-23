@@ -4,6 +4,11 @@ All notable changes to the `0.x` series of DailyDefense are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] — 2026-05-23
+
+### Fixed
+- **Random mode was unreachable from the UI.** v0.10.0 added the mode, its config, its leaderboards, and its sub-picker — but I never added the `Random` segment to the top-level mode picker. The picker is now three segments (Daily / Endless / Random), and selecting Random reveals the `12 waves / Infinite` sub-picker as designed.
+
 ## [0.10.0] — 2026-05-23
 
 ### Added
