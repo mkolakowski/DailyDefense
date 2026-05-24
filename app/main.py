@@ -9,7 +9,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.auth import router as auth_router
 from app.config import get_settings
-from app.routes.game import router as game_router
 from app.routes.health import router as health_router
 
 settings = get_settings()
@@ -21,13 +20,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
 @app.middleware("http")
 async def cache_control(request: Request, call_next):
-    """Cache-bust strategy: long-immutable static assets, revalidated HTML.
-
-    Static assets are versioned via `?v=<APP_VERSION>` in the rendered index,
-    so a new release always yields new URLs. Combined with `immutable`,
-    Cloudflare and the browser can cache them effectively forever without ever
-    serving stale content.
-    """
+    """Cache-bust strategy: long-immutable static assets, revalidated HTML."""
     response: Response = await call_next(request)
     path = request.url.path
     if path.startswith("/static/"):
@@ -41,7 +34,6 @@ async def cache_control(request: Request, call_next):
 
 app.include_router(health_router)
 app.include_router(auth_router)
-app.include_router(game_router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

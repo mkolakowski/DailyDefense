@@ -1,11 +1,17 @@
 # DailyDefense
 
-A daily tower-defense game in the browser. No sign-in required; everyone gets the same map each day and competes on a daily leaderboard.
+A browser-based **idle RPG**. Your character auto-fights monsters in zones,
+earns XP and gold, levels up, and buys upgrades. No sign-in required.
+Progress saves locally to your browser.
 
 - **Port**: `8014`
-- **Stack**: Python 3.12, FastAPI, Uvicorn, vanilla JS + Canvas
+- **Stack**: Python 3.12, FastAPI, Uvicorn, vanilla JS
 - **Auth**: Google SSO is scaffolded but **disabled by default** (`AUTH_ENABLED=false`)
 - **Container**: Docker / Docker Compose, GHCR-publishable
+
+> The `0.x` series shipped as a tower-defense game; the `1.x` series is an
+> idle RPG. See [`docs/CHANGELOG-v1.md`](docs/CHANGELOG-v1.md) for the
+> pivot details.
 
 ## Quick start
 
@@ -27,77 +33,35 @@ uvicorn app.main:app --host 0.0.0.0 --port 8014 --reload
 
 ## Gameplay
 
-- **Grid**: 10 wide × 20 tall.
-- **Map**: 1–6 enemy paths, 1–2 defense points. Deterministic per UTC day.
-- **Turrets** (cannot be placed on path cells):
-  - **Close** — short range, high DPS.
-  - **Medium** — long range, single target.
-  - **AoE** — splash damage on impact.
-- **Enemies**:
-  - **Runner** — fast, low HP.
-  - **Tank** — slow, high HP.
-- **Lives** drop when an enemy reaches a defense point. Survive 12 waves to win.
-- **Scores** are submitted to the daily leaderboard at `/api/scores`.
-
-Keyboard: `1`/`2`/`3` select turret · `N` next wave · `R` reset.
+- **Auto-combat.** Your character swings every 1.5 s; each enemy has its
+  own attack cadence. Damage = `max(1, atk - def)`.
+- **Four zones** with progressively tougher enemies (Slime → Goblin → Orc
+  → Dragon). New zones unlock as you level up.
+- **Three upgrades** with exponential cost: Attack, Defense, Health.
+- **Leveling** auto-grants +1 ATK and +5 max HP every level (full heal too).
+- **Persistence** via `localStorage` — closes and re-opens cleanly.
 
 ## Cloudflare Tunnel
 
-The app trusts `X-Forwarded-*` headers from any proxy (uvicorn is started with
-`--proxy-headers --forwarded-allow-ips=*`), so it can sit behind a Cloudflare
-Tunnel as-is.
-
-### If your `cloudflared` container runs on the same Docker host
-
-A compose override is provided to attach the app to an external network where
-your tunnel container lives.
-
-1. Make sure the network exists (whatever name your cloudflared is on):
-   ```bash
-   docker network ls
-   docker network create cloudflared        # only if it doesn't exist
-   ```
-2. Start DailyDefense joined to that network:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
-   ```
-3. In the Cloudflare Zero Trust dashboard, set the public hostname for your
-   tunnel to point at:
-   ```
-   http://dailydefense:8014
-   ```
-   `dailydefense` is the container name and is DNS-resolvable from any other
-   container attached to the same Docker network.
-
-To use a different network name, set `CLOUDFLARED_NETWORK` in `.env` (or
-inline) before bringing the stack up.
-
-### If `cloudflared` runs directly on the host
-
-Port `8014` is already published, so just point the tunnel at:
-```
-http://localhost:8014
-```
+See the [Cloudflare Tunnel section](#cloudflare-tunnel-detailed) below.
+Briefly: a `docker-compose.cloudflared.yml` override lets the app join an
+existing external Docker network where your `cloudflared` container lives.
 
 ## Project layout
 
 ```
 DailyDefense/
 ├── app/
-│   ├── main.py          # FastAPI: mounts /static, routes
+│   ├── main.py          # FastAPI: routes, cache headers, static mount
 │   ├── config.py        # pydantic-settings
-│   ├── auth.py          # Google SSO (gated by AUTH_ENABLED)
-│   ├── routes/
-│   │   ├── health.py
-│   │   └── game.py      # /api/daily, /api/scores
-│   ├── game/
-│   │   ├── daily.py     # date-seeded daily payload
-│   │   └── scores.py    # JSON-backed score store (volume)
-│   └── static/          # index.html, game.js, style.css
-├── docs/                # per-major changelogs
+│   ├── auth.py          # Google SSO scaffold (gated by AUTH_ENABLED)
+│   ├── routes/health.py
+│   └── static/          # index.html, game.js (idle RPG), style.css, icons
+├── docs/                # Per-major changelogs and TODO
 ├── .github/workflows/   # GHCR publish
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-compose.cloudflared.yml
 ├── requirements.txt
 ├── pyproject.toml
 ├── VERSION
@@ -108,7 +72,8 @@ DailyDefense/
 
 - Semantic versioning (`MAJOR.MINOR.PATCH`), bumped per feature or bugfix.
 - Each major version has its own changelog under `docs/CHANGELOG-vN.md`.
-- Every version change is committed, pushed, and the app is restarted via `docker compose up --build -d`.
+- Every version change is committed, pushed, and the app is restarted via
+  `docker compose up --build -d`.
 
 ## Container image
 
@@ -117,6 +82,27 @@ Published to GHCR on pushes to `main` and on `v*.*.*` tags:
 ```
 ghcr.io/mkolakowski/dailydefense:<tag>
 ```
+
+## Cloudflare Tunnel — detailed
+
+The app trusts `X-Forwarded-*` headers (uvicorn is started with
+`--proxy-headers --forwarded-allow-ips=*`).
+
+### Same Docker host
+
+```bash
+docker network ls
+docker network create cloudflared        # only if it doesn't exist
+docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+```
+
+In the Cloudflare Zero Trust dashboard, point the tunnel at
+`http://dailydefense:8014`. Override the network name with
+`CLOUDFLARED_NETWORK` in `.env` if needed.
+
+### Host-installed cloudflared
+
+Port 8014 is published — point the tunnel at `http://localhost:8014`.
 
 ## License
 

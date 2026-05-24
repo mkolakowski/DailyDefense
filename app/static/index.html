@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#0b1020" />
-<title>DailyDefense</title>
+<title>DailyDefense — Idle RPG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" />
@@ -19,96 +19,69 @@
   <div class="hud-left">
     <strong>DailyDefense</strong>
     <span id="app-version" class="version-chip" title="App version">v?</span>
-    <span id="daily-label" class="muted"></span>
+    <span class="muted">Idle RPG</span>
   </div>
   <div class="hud-stats">
-    <span title="Lives">❤ <b id="stat-lives">0</b></span>
-    <span title="Money">$ <b id="stat-money">0</b></span>
-    <span title="Wave">W <b id="stat-wave">0</b></span>
-    <span title="Score">⌬ <b id="stat-score">0</b></span>
+    <span title="Level">Lv <b id="stat-level">1</b></span>
+    <span title="Gold">💰 <b id="stat-gold">0</b></span>
   </div>
 </header>
 
 <main>
-  <div class="stage">
-    <canvas id="board" width="320" height="640" aria-label="Tower defense board"></canvas>
-    <div id="overlay" class="overlay hidden">
-      <div class="card">
-        <h2 id="overlay-title">Daily Defense</h2>
-        <p id="overlay-body">Defend the points. Tap a cell to place the selected turret.</p>
-        <div id="mode-picker" class="mode-picker">
-          <button type="button" class="mode-btn selected" data-family="daily">
-            <strong>Daily</strong>
-            <small>12 waves</small>
-          </button>
-          <button type="button" class="mode-btn" data-family="endless">
-            <strong>Endless</strong>
-            <small>survive · scale</small>
-          </button>
-          <button type="button" class="mode-btn" data-family="random">
-            <strong>Random</strong>
-            <small>no $ · luck</small>
-          </button>
-        </div>
-        <div id="difficulty-picker" class="difficulty-picker hidden">
-          <button type="button" class="diff-btn" data-difficulty="easy">
-            <strong>Easy</strong><small>$400 · 25 lives</small>
-          </button>
-          <button type="button" class="diff-btn selected" data-difficulty="normal">
-            <strong>Normal</strong><small>$300 · 20 lives</small>
-          </button>
-          <button type="button" class="diff-btn" data-difficulty="hard">
-            <strong>Hard</strong><small>$200 · 15 lives</small>
-          </button>
-        </div>
-        <div id="random-length-picker" class="difficulty-picker hidden">
-          <button type="button" class="diff-btn selected" data-length="finite">
-            <strong>12 waves</strong><small>finite run</small>
-          </button>
-          <button type="button" class="diff-btn" data-length="infinite">
-            <strong>Infinite</strong><small>survive forever</small>
-          </button>
-        </div>
-        <div class="overlay-actions">
-          <button type="button" id="overlay-start" class="primary">Start</button>
-          <button type="button" id="overlay-submit" class="primary hidden">Submit Score</button>
-        </div>
-        <div id="overlay-leaderboard" class="leaderboard"></div>
+  <section class="combat-card">
+    <div class="combatant player">
+      <div class="row">
+        <strong>You</strong>
+        <span class="muted" id="player-stats">⚔ 5 · 🛡 1</span>
       </div>
+      <div class="bar">
+        <div class="bar-fill bar-hp" id="player-hp-fill"></div>
+        <span class="bar-label" id="player-hp-label">50 / 50</span>
+      </div>
+      <div class="bar bar-thin">
+        <div class="bar-fill bar-xp" id="player-xp-fill"></div>
+        <span class="bar-label" id="player-xp-label">0 / 100 XP</span>
+      </div>
+      <div class="rest-banner hidden" id="player-rest">Resting…</div>
     </div>
-  </div>
+
+    <div class="vs">⚔</div>
+
+    <div class="combatant enemy">
+      <div class="row">
+        <strong id="enemy-name">Slime</strong>
+        <span class="muted" id="enemy-stats">⚔ 2 · 🛡 0</span>
+      </div>
+      <div class="bar">
+        <div class="bar-fill bar-enemy" id="enemy-hp-fill"></div>
+        <span class="bar-label" id="enemy-hp-label">20 / 20</span>
+      </div>
+      <div class="reward muted" id="enemy-reward">+10 XP · +3 gold</div>
+      <div class="rest-banner hidden" id="enemy-rest">Respawning…</div>
+    </div>
+  </section>
 
   <aside class="sidebar">
-    <section class="shop">
-      <h3>Turrets</h3>
-      <div class="turret-grid" id="turret-grid"></div>
-      <div id="random-next" class="random-next hidden">
-        <small id="random-next-label" class="random-next-label">Next turret — tap a cell to place</small>
-        <div id="random-next-card" class="turret-btn">
-          <span class="swatch" id="random-next-swatch"></span>
-          <span class="meta">
-            <strong id="random-next-name">—</strong>
-            <small id="random-next-meta">random</small>
-          </span>
-        </div>
-      </div>
-      <button type="button" id="start-wave" class="primary">Start Wave</button>
-      <button type="button" id="reset-run" class="ghost">Reset</button>
+    <section class="panel">
+      <h3>Zones</h3>
+      <div id="zone-list" class="zone-list"></div>
     </section>
 
-    <section class="info">
-      <h3>How to play</h3>
-      <ul class="hint">
-        <li>Tap or click a non-path cell to place the selected turret.</li>
-        <li>Turrets earn XP from kills (40 % to the killer, 30 % to the closest turret, 30 % split evenly). Each level boosts damage, range, fire rate, and splash — with diminishing returns.</li>
-        <li>The digit inside the turret is its current level.</li>
-        <li>Enemies pick a random path each spawn. Each map is the same for everyone today.</li>
-      </ul>
+    <section class="panel">
+      <h3>Upgrades</h3>
+      <div id="upgrade-list" class="upgrade-list"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Combat log</h3>
+      <ol id="combat-log" class="combat-log"></ol>
     </section>
   </aside>
 </main>
 
 <footer class="footer muted">
+  <button type="button" id="reset-save" class="link-btn">Reset save</button>
+  <span>·</span>
   <a href="/health" target="_blank" rel="noopener">health</a>
 </footer>
 
