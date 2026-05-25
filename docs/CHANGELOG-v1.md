@@ -5,6 +5,31 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-05-25
+
+### Added
+- **In-app wiki at `/wiki`.** Renders every Markdown file in `docs/`
+  (changelogs, TODO, etc.) as a styled HTML page. The wiki home lists
+  all available documents and links to the GitHub project at
+  <https://github.com/mkolakowski/DailyDefense>. Each doc page has a
+  back link to the wiki home and a footer with GitHub / Wiki / App
+  links. From now on, any new documentation dropped into `docs/` is
+  served by the wiki automatically — no code change required.
+- **"Wiki" link in the main-page footer**, next to "Reset save" and
+  "health".
+- `app/routes/wiki.py` — slug validation (`[A-Za-z0-9._-]+` only, and
+  the resolved path must stay inside `docs/`), so the route cannot be
+  coaxed into serving arbitrary files.
+- `app/static/wiki.css` — minimal MD3-styled prose layout for the
+  rendered pages (tables, code blocks, blockquotes, headings).
+- `markdown==3.7` dependency for server-side rendering. Extensions
+  enabled: `extra` (tables, fenced code), `sane_lists`, `toc`.
+
+### Changed
+- Cache-control middleware: `/wiki` and `/wiki/*` now use `no-cache`
+  so documentation updates are picked up immediately on the next
+  request after a release.
+
 ## [1.0.0] — 2026-05-24
 
 ### Changed — project pivot

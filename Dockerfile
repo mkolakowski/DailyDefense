@@ -19,6 +19,7 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY app ./app
+COPY docs ./docs
 COPY VERSION ./VERSION
 
 RUN useradd --create-home --shell /bin/bash appuser \
