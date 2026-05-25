@@ -29,6 +29,12 @@
 
 <main>
   <section class="combat-card">
+    <div class="arena">
+      <div class="combatant-figure player-figure" id="player-figure"></div>
+      <div class="vs">⚔</div>
+      <div class="combatant-figure enemy-figure" id="enemy-figure"></div>
+    </div>
+
     <div class="combatant player">
       <div class="row">
         <strong>You</strong>
@@ -44,8 +50,6 @@
       </div>
       <div class="rest-banner hidden" id="player-rest">Resting…</div>
     </div>
-
-    <div class="vs">⚔</div>
 
     <div class="combatant enemy">
       <div class="row">
@@ -68,6 +72,23 @@
     </section>
 
     <section class="panel">
+      <h3>Equipment</h3>
+      <div class="equip-list">
+        <div class="equip-row">
+          <span class="equip-slot">Weapon</span>
+          <span class="equip-name" id="equip-weapon-name">—</span>
+          <span class="equip-bonus" id="equip-weapon-bonus">+0 ATK</span>
+        </div>
+        <div class="equip-row">
+          <span class="equip-slot">Armor</span>
+          <span class="equip-name" id="equip-armor-name">—</span>
+          <span class="equip-bonus" id="equip-armor-bonus">+0 DEF</span>
+        </div>
+      </div>
+      <button type="button" id="open-shop" class="shop-btn">Open Shop</button>
+    </section>
+
+    <section class="panel">
       <h3>Upgrades</h3>
       <div id="upgrade-list" class="upgrade-list"></div>
     </section>
@@ -86,6 +107,24 @@
   <span>·</span>
   <a href="/health" target="_blank" rel="noopener">health</a>
 </footer>
+
+<div class="modal-backdrop hidden" id="shop-backdrop"></div>
+<aside class="modal-panel hidden" id="shop-modal" role="dialog" aria-label="Shop">
+  <div class="modal-header">
+    <h2>Shop</h2>
+    <button type="button" class="modal-close" id="shop-close" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body">
+    <section class="shop-section">
+      <h3>Weapons</h3>
+      <div class="shop-list" id="shop-weapons"></div>
+    </section>
+    <section class="shop-section">
+      <h3>Armor</h3>
+      <div class="shop-list" id="shop-armors"></div>
+    </section>
+  </div>
+</aside>
 
 <script src="/static/game.js?v={{VERSION}}" defer></script>
 </body>

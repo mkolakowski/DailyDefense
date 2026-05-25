@@ -125,6 +125,137 @@ main {
   color: var(--md-sys-color-on-surface-variant);
   letter-spacing: 0.2em;
 }
+
+/* Animated arena ----------------------------------------------------------- */
+.arena {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 8px;
+  min-height: 180px;
+  padding: 8px 6px 4px;
+  background:
+    radial-gradient(ellipse at 50% 95%,
+      rgba(255, 216, 107, 0.10) 0%,
+      rgba(0, 0, 0, 0) 70%),
+    linear-gradient(180deg,
+      rgba(122, 208, 255, 0.06) 0%,
+      rgba(0, 0, 0, 0.25) 100%);
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  overflow: hidden;
+}
+.arena .vs {
+  align-self: center;
+  font-size: 18px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.6;
+}
+.combatant-figure {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 160px;
+  transform-origin: 50% 95%;
+  will-change: transform, filter, opacity;
+}
+.combatant-figure.player-figure { justify-content: flex-end; padding-right: 8px; }
+.combatant-figure.enemy-figure  { justify-content: flex-start; padding-left: 8px; transform: scaleX(-1); }
+.combatant-figure .figure-svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+
+/* Floating damage numbers --------------------------------------------------- */
+.damage-popup {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translate(-50%, 0);
+  font-family: var(--md-sys-typescale-mono);
+  font-weight: 700;
+  font-size: 18px;
+  pointer-events: none;
+  text-shadow: 0 0 6px rgba(0,0,0,0.7);
+  animation: damage-float 850ms ease-out forwards;
+}
+/* enemy figure is mirrored — counter-flip damage popups so the minus reads correctly */
+.enemy-figure .damage-popup { transform: translate(-50%, 0) scaleX(-1); }
+.damage-popup.from-player { color: var(--md-sys-color-error); }
+.damage-popup.from-enemy  { color: var(--md-sys-color-error); }
+@keyframes damage-float {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.8); }
+  20%  { opacity: 1; transform: translate(-50%, 0)    scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -56px) scale(1); }
+}
+.enemy-figure .damage-popup { animation-name: damage-float-mirror; }
+@keyframes damage-float-mirror {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.8) scaleX(-1); }
+  20%  { opacity: 1; transform: translate(-50%, 0)    scale(1.1) scaleX(-1); }
+  100% { opacity: 0; transform: translate(-50%, -56px) scale(1)  scaleX(-1); }
+}
+
+/* Combat animations -------------------------------------------------------- */
+@keyframes player-attack {
+  0%   { transform: translateX(0)    rotate(0); }
+  35%  { transform: translateX(22px) rotate(-4deg); }
+  55%  { transform: translateX(22px) rotate(-4deg); }
+  100% { transform: translateX(0)    rotate(0); }
+}
+.player-figure.attacking { animation: player-attack 380ms cubic-bezier(.4,1.4,.4,1); }
+
+@keyframes enemy-attack {
+  0%   { transform: scaleX(-1) translateX(0); }
+  35%  { transform: scaleX(-1) translateX(22px) rotate(-4deg); }
+  55%  { transform: scaleX(-1) translateX(22px) rotate(-4deg); }
+  100% { transform: scaleX(-1) translateX(0)    rotate(0); }
+}
+.enemy-figure.attacking { animation: enemy-attack 380ms cubic-bezier(.4,1.4,.4,1); }
+
+@keyframes hit-shake {
+  0%, 100% { filter: none; }
+  20%      { filter: brightness(2) saturate(0.4); }
+  40%      { filter: brightness(2) saturate(0.4); }
+  60%      { filter: brightness(1.4) saturate(0.7); }
+}
+.player-figure.hit { animation: hit-shake 320ms ease-out, player-shake 320ms ease-out; }
+.enemy-figure.hit  { animation: hit-shake 320ms ease-out, enemy-shake 320ms ease-out; }
+@keyframes player-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  60% { transform: translateX(4px); }
+  85% { transform: translateX(-2px); }
+}
+@keyframes enemy-shake {
+  0%, 100% { transform: scaleX(-1) translateX(0); }
+  25% { transform: scaleX(-1) translateX(-6px); }
+  60% { transform: scaleX(-1) translateX(4px); }
+  85% { transform: scaleX(-1) translateX(-2px); }
+}
+
+@keyframes spawn-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.6); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes spawn-in-mirror {
+  from { opacity: 0; transform: scaleX(-1) translateY(20px) scale(0.6); }
+  to   { opacity: 1; transform: scaleX(-1) translateY(0)    scale(1); }
+}
+.player-figure.spawning { animation: spawn-in 420ms ease-out; }
+.enemy-figure.spawning  { animation: spawn-in-mirror 420ms ease-out; }
+
+@keyframes die-fade {
+  to { opacity: 0; transform: translateY(8px) scale(0.9) rotate(-18deg); filter: grayscale(0.7) brightness(0.5); }
+}
+@keyframes die-fade-mirror {
+  to { opacity: 0; transform: scaleX(-1) translateY(8px) scale(0.9) rotate(-18deg); filter: grayscale(0.7) brightness(0.5); }
+}
+.player-figure.dying { animation: die-fade 600ms ease-in forwards; }
+.enemy-figure.dying  { animation: die-fade-mirror 600ms ease-in forwards; }
 .reward { font-size: 12px; }
 .rest-banner {
   font-size: 12px;
@@ -222,6 +353,166 @@ main {
 .zone-btn:active:not(:disabled),
 .upgrade-btn:active:not(:disabled) { filter: brightness(0.92); transform: translateY(1px); }
 .upgrade-btn.affordable { border-color: var(--md-sys-color-secondary-container); }
+
+/* Equipment panel ---------------------------------------------------------- */
+.equip-list { display: flex; flex-direction: column; gap: 6px; }
+.equip-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.equip-slot {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.equip-name { font-weight: 500; color: var(--md-sys-color-on-surface); }
+.equip-bonus {
+  font-family: var(--md-sys-typescale-mono);
+  color: var(--md-sys-color-secondary);
+  font-size: 12px;
+}
+.shop-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: 10px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 500;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 80ms ease, transform 80ms ease;
+}
+.shop-btn:hover { filter: brightness(1.08); }
+.shop-btn:active { filter: brightness(0.92); transform: translateY(1px); }
+
+/* Shop modal --------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+.modal-panel {
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, calc(100vw - 24px));
+  max-height: calc(100dvh - 48px);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+  box-shadow: var(--md-sys-elevation-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+.modal-close {
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  touch-action: manipulation;
+}
+.modal-close:hover { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+.modal-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+}
+.shop-section { margin-bottom: 18px; }
+.shop-section:last-child { margin-bottom: 0; }
+.shop-section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.shop-list { display: flex; flex-direction: column; gap: 6px; }
+.shop-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+.shop-item.equipped { border-color: var(--md-sys-color-primary); }
+.shop-swatch {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.15);
+}
+.shop-meta { display: flex; flex-direction: column; min-width: 0; }
+.shop-meta strong { font-weight: 500; font-size: 14px; }
+.shop-meta small  { color: var(--md-sys-color-on-surface-variant); font-size: 11px; }
+.shop-action {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 500;
+  font-size: 13px;
+  font-family: var(--md-sys-typescale-mono);
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.shop-action.buy {
+  background: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
+}
+.shop-action.equip {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+.shop-action:disabled {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.shop-action:not(:disabled):hover { filter: brightness(1.08); }
+.shop-action:not(:disabled):active { filter: brightness(0.92); transform: translateY(1px); }
 
 /* Combat log --------------------------------------------------------------- */
 .combat-log {

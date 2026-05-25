@@ -5,6 +5,50 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-05-25
+
+### Added
+- **Animated combat arena.** The combat card now opens with a stage
+  where your character and the current zone's enemy face off as SVG
+  figures. Each swing triggers a lunge animation; the target shakes
+  and flashes; a floating `-N` damage number rises from the hit. Kills
+  fade out + rotate; respawns scale back in. Player death dims the
+  figure and the rest banner takes over.
+- **Per-enemy sprites.** Slime (green blob), Goblin (snarling green
+  humanoid with a dagger), Orc (tusked brute with a club), and Dragon
+  (winged, horned, red) all have distinct silhouettes drawn from
+  primitives so they recolour cheaply.
+- **Equipment system.** Two slots — weapon and armor — with a five-tier
+  ladder each:
+  | Tier | Weapon         | ATK | Cost     | Armor           | DEF | Cost      |
+  |------|----------------|-----|----------|-----------------|-----|-----------|
+  | 1    | Wooden Club    | +0  | starter  | Cloth Tunic     | +0  | starter   |
+  | 2    | Iron Sword     | +3  | 50 g     | Leather Armor   | +2  | 60 g      |
+  | 3    | Steel Sword    | +8  | 250 g    | Chainmail       | +6  | 300 g     |
+  | 4    | Flaming Blade  | +20 | 1,500 g  | Plate Armor     | +15 | 1,800 g   |
+  | 5    | Dragonslayer   | +50 | 8,000 g  | Dragonscale     | +35 | 10,000 g  |
+  Bonuses stack on top of base stats and the existing Attack / Defense
+  upgrades. The equipped weapon changes the player's shape and colour
+  (club → sword → flame-tipped sword → greatsword); the equipped armor
+  changes the body fill.
+- **Shop overlay.** A new "Open Shop" button in the Equipment sidebar
+  panel opens a modal with both equipment tracks. Each item shows a
+  colour swatch, name, bonus, and a Buy / Equip / Equipped action
+  button. Closes on backdrop click, the `×` button, or Escape.
+- **Auto-equip on upgrade.** Buying a strictly stronger item in either
+  slot equips it immediately so the bonus is felt without a second
+  click.
+- **Save migration.** `state.equipment` and `state.inventory` join the
+  save schema; existing saves get the starter Wooden Club + Cloth Tunic
+  via the same merge pattern that handled upgrades in 1.0.0.
+
+### Changed
+- The HUD's player stats line now shows **effective** ATK / DEF
+  (base + upgrades + equipment) instead of just base + upgrades.
+- The combat card's old static "You vs Enemy" header is replaced by
+  the new animated arena; the HP / XP / reward bars below it are
+  unchanged.
+
 ## [1.1.0] — 2026-05-25
 
 ### Added
