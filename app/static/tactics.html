@@ -19,15 +19,17 @@
   <div class="hud-left">
     <a href="/" class="home-link">← DailyDefense</a>
     <span id="app-version" class="version-chip" title="App version">v?</span>
-    <span class="muted">Tactics — v1.3.0 recon</span>
+    <span class="muted">Tactics — Skirmish</span>
   </div>
   <div class="hud-right">
-    <span class="muted" id="tactics-status">Click your commander to scout the field.</span>
+    <span class="phase-chip" id="battle-turn">Turn 1</span>
+    <span class="phase-chip phase-state" id="battle-phase" data-phase="player">Player phase</span>
   </div>
 </header>
 
 <main class="tactics-main">
   <section class="board-card">
+    <div class="status-line muted" id="tactics-status">Click a unit to act.</div>
     <div class="board-wrap">
       <div class="tactics-board" id="tactics-board" aria-label="Battlefield"></div>
     </div>
@@ -41,19 +43,23 @@
 
   <aside class="tactics-sidebar">
     <section class="panel">
-      <h3>Commander</h3>
-      <div class="cmdr-row">
-        <div class="cmdr-portrait" id="cmdr-portrait"></div>
-        <div class="cmdr-meta">
-          <strong>Commander</strong>
-          <small>Move range: <span id="cmdr-move-range">4</span></small>
-          <small>Position: <span id="cmdr-pos">—</span></small>
-        </div>
+      <h3>Battle</h3>
+      <div class="battle-actions">
+        <button type="button" id="battle-end-turn" class="action-btn primary">End Turn</button>
+        <button type="button" id="battle-skip-attack" class="action-btn ghost hidden">Skip Attack</button>
       </div>
+      <p class="muted" style="margin: 10px 0 0;">
+        Wipe the enemy army to win. If your commander falls, the skirmish is lost.
+      </p>
     </section>
 
     <section class="panel">
-      <h3>Recon log</h3>
+      <h3>Roster</h3>
+      <ul id="unit-roster" class="roster-list"></ul>
+    </section>
+
+    <section class="panel">
+      <h3>Combat log</h3>
       <ol id="tactics-log" class="tactics-log"></ol>
     </section>
   </aside>
@@ -66,6 +72,18 @@
   <span>·</span>
   <a href="/health" target="_blank" rel="noopener">health</a>
 </footer>
+
+<div class="modal-backdrop hidden" id="outcome-backdrop"></div>
+<aside class="modal-panel hidden" id="outcome-modal" role="dialog" aria-label="Battle result">
+  <div class="modal-header">
+    <h2 class="outcome-title" id="outcome-title">Battle result</h2>
+  </div>
+  <div class="modal-body" id="outcome-body"></div>
+  <div class="modal-footer">
+    <a href="/" class="action-btn ghost">Return to RPG</a>
+    <button type="button" id="outcome-again" class="action-btn primary">Skirmish again</button>
+  </div>
+</aside>
 
 <script src="/static/tactics.js?v={{VERSION}}" defer></script>
 </body>

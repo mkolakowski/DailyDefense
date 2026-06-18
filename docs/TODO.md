@@ -25,7 +25,7 @@ Running list of work items for DailyDefense. Move items into the changelog
       idle-RPG unit/stat pool or run as a separate mode.
   - [x] v1.3.0 "Operation First Footprint" — `/tactics` route, static
         10×8 map, click-to-move commander.
-  - [ ] v1.4.0 "Operation Skirmish Line" — enemy units, turn structure,
+  - [x] v1.4.0 "Operation Skirmish Line" — enemy units, turn structure,
         basic melee combat, win/loss detection, reward back into idle save.
   - [ ] v1.5.0 "Operation Muster Roll" — pre-battle deploy screen, 2–3
         unit classes with different move + attack ranges.

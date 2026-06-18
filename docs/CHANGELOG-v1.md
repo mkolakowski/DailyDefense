@@ -5,6 +5,49 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-06-18
+
+### Added — Tactics combat loop ("Operation Skirmish Line")
+- **Enemy units.** Three Goblins spawn on the far side of the
+  battlefield (HP 20 · ⚔ 4 · 🛡 1 · move 3). New goblin sprite, mirrored
+  to face the commander.
+- **Turn-based phase machine.** The skirmish alternates **Player phase
+  → Enemy phase** until one side is wiped:
+  - Each ally gets one **move + (optional) attack** per turn. After
+    moving, adjacent enemies are highlighted in red; click one to
+    attack, or click anywhere else (or the new **Skip Attack** button)
+    to end the unit's turn without striking.
+  - The phase auto-ends once every living ally has acted, or the
+    player can press **End Turn** to forfeit remaining acts.
+- **Melee combat.** Damage = `max(1, attacker.atk - defender.def)`,
+  matching the idle-RPG formula. Hits play an attack-lunge, a target
+  shake + flash, and a floating `-N` damage popup. Deaths fade out and
+  the fallen unit is removed from the board.
+- **Enemy AI.** Each enemy BFS-finds its reachable tiles, picks the one
+  with the smallest Manhattan distance to the commander (tie-breaking
+  by lower path cost), animates the move, then attacks if it ends
+  adjacent. Other units block movement.
+- **Win / loss detection.** Wipe every enemy = **Victory** modal;
+  commander HP ≤ 0 = **Defeated** modal. Both offer "Return to RPG"
+  and "Skirmish again" (resets the board to a fresh battle).
+- **Rewards back into the idle save.** A win reads
+  `dailydefense.idle.v1` from localStorage, adds **+50 XP** and **+30
+  gold**, and cascades the same level-up loop the idle game uses
+  (XP curve `floor(40·level^1.65)`, +1 ATK / +5 max HP per level, full
+  heal). The Victory modal calls out the level-up if one happened.
+- **Sidebar refresh.** New **Battle** panel (turn + phase chip + End
+  Turn / Skip Attack), **Roster** panel with each unit's HP bar +
+  status (ready / acted / fallen), and the renamed **Combat log**
+  carrying move / attack / kill / phase events.
+- **Per-unit HP bars on the board** so threatened units read at a
+  glance — and switch to amber when below 33% HP.
+
+### Changed
+- Top HUD now shows a `Turn N` + `Player / Enemy phase` chip on the
+  right side instead of free-text status.
+- `tactics.css` extended with attack-target tile highlights, attack
+  lunge / hit-shake / death animations, and the outcome modal styling.
+
 ## [1.3.0] — 2026-06-18
 
 ### Added — Tactics mode foundation ("Operation First Footprint")
