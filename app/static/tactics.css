@@ -1,0 +1,274 @@
+:root {
+  --md-sys-color-primary:                     #7ad0ff;
+  --md-sys-color-on-primary:                  #04122a;
+  --md-sys-color-secondary:                   #ffd86b;
+  --md-sys-color-background:                  #0b1020;
+  --md-sys-color-on-background:               #e6ebff;
+  --md-sys-color-surface-container:           #131a30;
+  --md-sys-color-surface-container-high:      #1c2546;
+  --md-sys-color-surface-container-highest:   #2a3358;
+  --md-sys-color-on-surface:                  #e6ebff;
+  --md-sys-color-on-surface-variant:          #8895c2;
+  --md-sys-color-outline:                     #2a3358;
+  --md-sys-color-outline-variant:             #1a223e;
+  --md-sys-color-ok:                          #8aff9e;
+
+  --md-sys-elevation-1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+
+  --md-sys-typescale-font: "Roboto", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --md-sys-typescale-mono: "Roboto Mono", "SF Mono", "Menlo", monospace;
+
+  --tile-size: 56px;
+}
+
+* { box-sizing: border-box; }
+.hidden { display: none !important; }
+.muted { color: var(--md-sys-color-on-surface-variant); font-size: 12px; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-font);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+body { min-height: 100dvh; display: flex; flex-direction: column; }
+a { color: var(--md-sys-color-primary); }
+
+/* HUD ---------------------------------------------------------------------- */
+.tactics-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--md-sys-color-surface-container);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hud-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.home-link { font-weight: 500; text-decoration: none; }
+.version-chip {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Main grid ---------------------------------------------------------------- */
+.tactics-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+  padding: 14px;
+  min-height: 0;
+}
+@media (max-width: 880px) {
+  .tactics-main { grid-template-columns: 1fr; }
+}
+
+.board-card {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-1);
+  align-self: start;
+}
+.board-wrap {
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* Grid --------------------------------------------------------------------- */
+.tactics-board {
+  position: relative;
+  display: grid;
+  grid-auto-rows: var(--tile-size);
+  gap: 2px;
+  padding: 2px;
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 8px;
+  user-select: none;
+}
+.tile {
+  position: relative;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease;
+}
+.tile.terrain-grass    { background: #2d5234; }
+.tile.terrain-forest   { background: #1d3a26; }
+.tile.terrain-mountain { background: #4d4036; cursor: not-allowed; }
+.tile.terrain-water    { background: #1d3656; cursor: not-allowed; }
+
+/* subtle texture indicators */
+.tile.terrain-forest::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(120, 200, 130, 0.55) 0 4px, transparent 5px),
+    radial-gradient(circle at 70% 65%, rgba(120, 200, 130, 0.45) 0 5px, transparent 6px);
+  opacity: 0.7;
+}
+.tile.terrain-mountain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(45deg, rgba(255,255,255,0.10) 0 50%, transparent 50% 100%);
+  clip-path: polygon(15% 80%, 50% 25%, 85% 80%);
+}
+.tile.terrain-water::after {
+  content: "";
+  position: absolute;
+  inset: 25% 15%;
+  border-top: 2px solid rgba(180, 220, 255, 0.35);
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.tile.reachable {
+  box-shadow: inset 0 0 0 2px var(--md-sys-color-primary);
+  filter: brightness(1.25) saturate(1.15);
+}
+.tile.reachable::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--md-sys-color-primary);
+  opacity: 0.15;
+  pointer-events: none;
+}
+.tile.selected {
+  box-shadow: inset 0 0 0 3px var(--md-sys-color-secondary);
+}
+.tile:hover.reachable {
+  filter: brightness(1.5) saturate(1.25);
+}
+
+/* Unit layer (absolutely positioned on top of the grid) ------------------- */
+.unit {
+  position: absolute;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  pointer-events: none;
+  transition: transform 220ms cubic-bezier(.4, 1.4, .4, 1);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55));
+}
+.unit svg { width: 80%; height: 90%; }
+.unit.commander { z-index: 2; }
+.unit.commander.selected svg {
+  animation: cmdr-bob 1.2s ease-in-out infinite;
+}
+@keyframes cmdr-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* Make the commander tile catch clicks even though .unit is non-interactive. */
+.tile.commander-tile { cursor: pointer; }
+
+/* Legend ------------------------------------------------------------------- */
+.board-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+}
+.board-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.4);
+}
+.legend-swatch.terrain-grass    { background: #2d5234; }
+.legend-swatch.terrain-forest   { background: #1d3a26; }
+.legend-swatch.terrain-mountain { background: #4d4036; }
+.legend-swatch.terrain-water    { background: #1d3656; }
+
+/* Sidebar ------------------------------------------------------------------ */
+.tactics-sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: var(--md-sys-elevation-1);
+}
+.panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+.cmdr-row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.cmdr-portrait {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: var(--md-sys-color-surface-container-high);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 4px;
+}
+.cmdr-portrait svg { width: 90%; height: 90%; }
+.cmdr-meta { display: flex; flex-direction: column; }
+.cmdr-meta strong { font-weight: 500; font-size: 14px; color: var(--md-sys-color-primary); }
+.cmdr-meta small { color: var(--md-sys-color-on-surface-variant); font-size: 11px; }
+
+/* Log --------------------------------------------------------------------- */
+.tactics-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 13px;
+  font-family: var(--md-sys-typescale-mono);
+}
+.tactics-log li { color: var(--md-sys-color-on-surface-variant); line-height: 1.3; }
+.tactics-log li.move { color: var(--md-sys-color-primary); }
+.tactics-log li.select { color: var(--md-sys-color-secondary); }
+
+/* Footer ------------------------------------------------------------------ */
+.tactics-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  font-size: 12px;
+}
+.tactics-footer a { color: var(--md-sys-color-on-surface-variant); text-decoration: none; }
+.tactics-footer a:hover { color: var(--md-sys-color-primary); text-decoration: underline; }

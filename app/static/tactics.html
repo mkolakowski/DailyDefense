@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0b1020" />
+<title>DailyDefense — Tactics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" />
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{VERSION}}" />
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png?v={{VERSION}}" />
+<link rel="apple-touch-icon" sizes="180x180" href="/static/icon-180.png?v={{VERSION}}" />
+<link rel="stylesheet" href="/static/tactics.css?v={{VERSION}}" />
+</head>
+<body>
+<header class="tactics-hud">
+  <div class="hud-left">
+    <a href="/" class="home-link">← DailyDefense</a>
+    <span id="app-version" class="version-chip" title="App version">v?</span>
+    <span class="muted">Tactics — v1.3.0 recon</span>
+  </div>
+  <div class="hud-right">
+    <span class="muted" id="tactics-status">Click your commander to scout the field.</span>
+  </div>
+</header>
+
+<main class="tactics-main">
+  <section class="board-card">
+    <div class="board-wrap">
+      <div class="tactics-board" id="tactics-board" aria-label="Battlefield"></div>
+    </div>
+    <div class="board-legend muted">
+      <span><span class="legend-swatch terrain-grass"></span> Grass</span>
+      <span><span class="legend-swatch terrain-forest"></span> Forest</span>
+      <span><span class="legend-swatch terrain-mountain"></span> Mountain (impassable)</span>
+      <span><span class="legend-swatch terrain-water"></span> Water (impassable)</span>
+    </div>
+  </section>
+
+  <aside class="tactics-sidebar">
+    <section class="panel">
+      <h3>Commander</h3>
+      <div class="cmdr-row">
+        <div class="cmdr-portrait" id="cmdr-portrait"></div>
+        <div class="cmdr-meta">
+          <strong>Commander</strong>
+          <small>Move range: <span id="cmdr-move-range">4</span></small>
+          <small>Position: <span id="cmdr-pos">—</span></small>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Recon log</h3>
+      <ol id="tactics-log" class="tactics-log"></ol>
+    </section>
+  </aside>
+</main>
+
+<footer class="tactics-footer muted">
+  <a href="/">← Back to idle RPG</a>
+  <span>·</span>
+  <a href="/wiki">Wiki</a>
+  <span>·</span>
+  <a href="/health" target="_blank" rel="noopener">health</a>
+</footer>
+
+<script src="/static/tactics.js?v={{VERSION}}" defer></script>
+</body>
+</html>

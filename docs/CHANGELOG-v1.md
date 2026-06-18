@@ -5,6 +5,45 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-06-18
+
+### Added — Tactics mode foundation ("Operation First Footprint")
+- **New `/tactics` route.** A standalone page (`app/routes/tactics.py` +
+  `app/static/tactics.html` / `.css` / `.js`) for the upcoming
+  Fire-Emblem-style grid combat mode. The idle RPG and tactics mode run
+  as separate pages — no shared tick loop — so the idle auto-combat
+  pauses cleanly when the player crosses over.
+- **Hand-built 10×8 battlefield.** Four terrain types laid out by hand
+  for v1.3.0 (procedural generation arrives in a later release):
+  | Glyph | Terrain  | Passable? |
+  |-------|----------|-----------|
+  | `.`   | Grass    | yes       |
+  | `T`   | Forest   | yes       |
+  | `M`   | Mountain | no        |
+  | `W`   | Water    | no        |
+  Forests, mountains, and water each render with a small CSS pseudo-
+  element accent so the terrain reads at a glance.
+- **Click-to-move commander.** BFS computes every tile reachable within
+  the commander's move range (4); reachable tiles get an MD3-primary
+  inset highlight. Clicking a highlighted tile slides the commander to
+  it with a `cubic-bezier(.4, 1.4, .4, 1)` CSS transition. Clicking the
+  commander a second time, or clicking outside the highlight,
+  deselects. Impassable tiles are filtered out of the BFS frontier so
+  mountains and water genuinely block movement.
+- **Commander sprite.** A simplified pull from the existing idle-RPG
+  warrior SVG (`game.js`'s `playerSvg()`), rendered both on the board
+  and as a sidebar portrait. Equipment-aware rendering (so the
+  commander reflects the idle save's worn gear) lands with v1.4.0.
+- **Tactics sidebar.** "Commander" panel showing move range + current
+  `(x, y)`; "Recon log" panel for selection / move events, mirroring
+  the idle-RPG combat log.
+- **Entry point on the main page.** A new "Battle" sidebar panel on
+  `/` with an "Enter Tactics" button linking to `/tactics`.
+
+### Changed
+- Cache-control middleware now treats `/tactics` the same as `/` —
+  `Cache-Control: no-cache` so version bumps propagate immediately.
+
 ## [1.2.0] — 2026-05-25
 
 ### Added

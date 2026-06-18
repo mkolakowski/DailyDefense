@@ -10,6 +10,7 @@ from app import __version__
 from app.auth import router as auth_router
 from app.config import get_settings
 from app.routes.health import router as health_router
+from app.routes.tactics import router as tactics_router
 from app.routes.wiki import router as wiki_router
 
 settings = get_settings()
@@ -26,7 +27,7 @@ async def cache_control(request: Request, call_next):
     path = request.url.path
     if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif path == "/" or path == "/wiki" or path.startswith("/wiki/"):
+    elif path == "/" or path == "/tactics" or path == "/wiki" or path.startswith("/wiki/"):
         response.headers["Cache-Control"] = "no-cache"
     elif path.startswith("/api/") or path == "/health":
         response.headers["Cache-Control"] = "no-store"
@@ -36,6 +37,7 @@ async def cache_control(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(wiki_router)
+app.include_router(tactics_router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
