@@ -22,14 +22,14 @@
     <span class="muted">Tactics — Skirmish</span>
   </div>
   <div class="hud-right">
-    <span class="phase-chip" id="battle-turn">Turn 1</span>
-    <span class="phase-chip phase-state" id="battle-phase" data-phase="player">Player phase</span>
+    <span class="phase-chip" id="battle-turn">Deploy</span>
+    <span class="phase-chip phase-state" id="battle-phase" data-phase="deploy">Muster your army</span>
   </div>
 </header>
 
 <main class="tactics-main">
   <section class="board-card">
-    <div class="status-line muted" id="tactics-status">Click a unit to act.</div>
+    <div class="status-line muted" id="tactics-status">Pick a class to deploy.</div>
     <div class="board-wrap">
       <div class="tactics-board" id="tactics-board" aria-label="Battlefield"></div>
     </div>
@@ -42,7 +42,17 @@
   </section>
 
   <aside class="tactics-sidebar">
-    <section class="panel">
+    <section class="panel" id="deploy-panel">
+      <h3>Deploy Allies (<span id="deploy-remaining">3</span> slots)</h3>
+      <div id="deploy-classes" class="deploy-classes"></div>
+      <button type="button" id="deploy-start" class="action-btn primary" style="margin-top: 10px;">Begin Battle</button>
+      <p class="muted" style="margin: 10px 0 0;">
+        Click a class then a cyan tile to place. Click a placed ally to
+        remove. Commander auto-deploys in the back row.
+      </p>
+    </section>
+
+    <section class="panel hidden" id="battle-panel">
       <h3>Battle</h3>
       <div class="battle-actions">
         <button type="button" id="battle-end-turn" class="action-btn primary">End Turn</button>
@@ -53,7 +63,7 @@
       </p>
     </section>
 
-    <section class="panel">
+    <section class="panel hidden" id="roster-panel">
       <h3>Roster</h3>
       <ul id="unit-roster" class="roster-list"></ul>
     </section>

@@ -1,10 +1,9 @@
 (() => {
   "use strict";
 
-  // --- Map ------------------------------------------------------------------
+  // === Map ==================================================================
   // Hand-built 10x8 battlefield. Procedural generation lands in a later
-  // release; for now this gives terrain variety + a couple of choke points
-  // for the AI to navigate around.
+  // release; for now this gives terrain variety + a couple of choke points.
   //
   // Legend: . grass · T forest · M mountain (impassable) · W water (impassable)
   const MAP = [
@@ -22,30 +21,42 @@
   const TERRAIN = { ".": "grass", "T": "forest", "M": "mountain", "W": "water" };
   const IMPASSABLE = new Set(["mountain", "water"]);
 
-  // --- Unit templates -------------------------------------------------------
-  const COMMANDER = { name: "Commander", maxHp: 50, atk: 8, def: 2, moveRange: 4, sprite: "commander" };
-  const GOBLIN    = { name: "Goblin",    maxHp: 20, atk: 4, def: 1, moveRange: 3, sprite: "goblin" };
-
+  // === Unit templates =======================================================
+  const COMMANDER = {
+    name: "Commander", maxHp: 50, atk: 8, def: 2, moveRange: 4, attackRange: 1, sprite: "commander",
+  };
+  const UNIT_CLASSES = {
+    warrior: { name: "Warrior", maxHp: 30, atk: 6, def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
+    archer:  { name: "Archer",  maxHp: 18, atk: 5, def: 0, moveRange: 3, attackRange: 2, sprite: "archer"  },
+    mage:    { name: "Mage",    maxHp: 16, atk: 8, def: 0, moveRange: 2, attackRange: 2, sprite: "mage"    },
+  };
+  const CLASS_ORDER = ["warrior", "archer", "mage"];
+  const ENEMY_TYPES = {
+    goblin:       { name: "Goblin",        maxHp: 20, atk: 4, def: 1, moveRange: 3, attackRange: 1, sprite: "goblin" },
+    goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 2, sprite: "goblinArcher" },
+  };
   const COMMANDER_START = { x: 1, y: 7 };
   const ENEMY_STARTS = [
-    { x: 7, y: 0 },
-    { x: 8, y: 2 },
-    { x: 6, y: 4 },
+    { type: "goblin",       x: 7, y: 0 },
+    { type: "goblin",       x: 8, y: 2 },
+    { type: "goblinArcher", x: 6, y: 4 },
   ];
+  // Deploy zone: bottom two rows of the map.
+  const SPAWN_ROWS = new Set([6, 7]);
+  const DEPLOY_BUDGET = 3;
 
-  // --- Rewards / persistence ------------------------------------------------
+  // === Rewards / persistence ================================================
   const REWARD = { xp: 50, gold: 30 };
   const IDLE_SAVE_KEY = "dailydefense.idle.v1";
-  // Mirrors xpForLevel() in game.js so level-ups awarded from tactics use the
-  // same curve as XP earned from idle combat.
+  // Mirrors xpForLevel() in game.js so tactics level-ups use the idle curve.
   const xpForLevel = (level) => Math.floor(40 * Math.pow(level, 1.65));
 
-  // --- State ----------------------------------------------------------------
+  // === State ================================================================
   let nextUnitId = 1;
   function makeUnit(tmpl, kind, x, y) {
     return {
       id: `u${nextUnitId++}`,
-      kind,
+      kind, // "ally" | "enemy"
       name: tmpl.name,
       sprite: tmpl.sprite,
       x, y,
@@ -54,7 +65,9 @@
       atk: tmpl.atk,
       def: tmpl.def,
       moveRange: tmpl.moveRange,
+      attackRange: tmpl.attackRange,
       hasActed: false,
+      isCommander: tmpl.sprite === "commander",
     };
   }
 
@@ -63,16 +76,17 @@
     return {
       units: [
         makeUnit(COMMANDER, "ally", COMMANDER_START.x, COMMANDER_START.y),
-        ...ENEMY_STARTS.map((p) => makeUnit(GOBLIN, "enemy", p.x, p.y)),
+        ...ENEMY_STARTS.map((p) => makeUnit(ENEMY_TYPES[p.type], "enemy", p.x, p.y)),
       ],
-      phase: "player",        // "player" | "enemy" | "done"
+      phase: "deploy", // "deploy" | "player" | "enemy" | "done"
       turn: 1,
       selectedId: null,
-      reachable: new Map(),    // tile-key -> cost (only set while a unit is selected pre-move)
-      attackTargets: new Set(),// unit ids attackable from current position
-      awaitingAttack: false,   // selected unit has moved, awaiting attack-or-skip
-      busy: false,             // animation in progress, ignore input
-      outcome: null,           // null | "win" | "loss"
+      selectedClass: null,
+      reachable: new Map(),
+      attackTargets: new Set(),
+      awaitingAttack: false,
+      busy: false,
+      outcome: null,
     };
   }
 
@@ -80,7 +94,7 @@
   let log = [];
   const MAX_LOG = 24;
 
-  // --- DOM ------------------------------------------------------------------
+  // === DOM ==================================================================
   const $ = (id) => document.getElementById(id);
   const elBoard = $("tactics-board");
   const elStatus = $("tactics-status");
@@ -91,21 +105,27 @@
   const elEndTurn = $("battle-end-turn");
   const elSkipAttack = $("battle-skip-attack");
   const elRoster = $("unit-roster");
+  const elDeployPanel = $("deploy-panel");
+  const elBattlePanel = $("battle-panel");
+  const elRosterPanel = $("roster-panel");
+  const elDeployRemaining = $("deploy-remaining");
+  const elDeployClasses = $("deploy-classes");
+  const elDeployStart = $("deploy-start");
   const elOutcomeBackdrop = $("outcome-backdrop");
   const elOutcomeModal = $("outcome-modal");
   const elOutcomeTitle = $("outcome-title");
   const elOutcomeBody = $("outcome-body");
   const elOutcomeAgain = $("outcome-again");
 
-  // --- Helpers --------------------------------------------------------------
+  // === Map / unit helpers ===================================================
   const key = (x, y) => `${x},${y}`;
   const terrainAt = (x, y) => TERRAIN[MAP[y][x]] || "grass";
   const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
   const passableTerrain = (x, y) => inBounds(x, y) && !IMPASSABLE.has(terrainAt(x, y));
   const unitAt = (x, y) => state.units.find((u) => u.hp > 0 && u.x === x && u.y === y);
-  const commander = () => state.units.find((u) => u.sprite === "commander");
+  const commander = () => state.units.find((u) => u.isCommander);
   const livingEnemies = () => state.units.filter((u) => u.kind === "enemy" && u.hp > 0);
-  const livingAllies = () => state.units.filter((u) => u.kind === "ally" && u.hp > 0);
+  const livingAllies  = () => state.units.filter((u) => u.kind === "ally"  && u.hp > 0);
   const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
   function pushLog(text, kind) {
@@ -113,12 +133,9 @@
     if (log.length > MAX_LOG) log.length = MAX_LOG;
     renderLog();
   }
-
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-  // --- BFS reachability -----------------------------------------------------
-  // `blockerIds` are unit ids whose tiles count as impassable for this BFS.
-  // Always block other living units; the moving unit's own start is allowed.
+  // === BFS reachability =====================================================
   function reachableFrom(unit, range) {
     const visited = new Map();
     visited.set(key(unit.x, unit.y), 0);
@@ -129,8 +146,8 @@
       for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
         const nx = cur.x + dx, ny = cur.y + dy;
         if (!passableTerrain(nx, ny)) continue;
-        const occupant = unitAt(nx, ny);
-        if (occupant && occupant.id !== unit.id) continue;
+        const occ = unitAt(nx, ny);
+        if (occ && occ.id !== unit.id) continue;
         const next = cur.cost + 1;
         const k = key(nx, ny);
         if (visited.has(k) && visited.get(k) <= next) continue;
@@ -141,16 +158,60 @@
     return visited; // includes the start tile (cost 0)
   }
 
-  function adjacentEnemiesOf(unit) {
+  function enemiesInRange(unit) {
     const targets = new Set();
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const occ = unitAt(unit.x + dx, unit.y + dy);
-      if (occ && occ.kind !== unit.kind && occ.hp > 0) targets.add(occ.id);
+    for (const other of state.units) {
+      if (other.hp <= 0) continue;
+      if (other.kind === unit.kind) continue;
+      if (manhattan(unit, other) <= unit.attackRange) targets.add(other.id);
     }
     return targets;
   }
 
-  // --- Rendering ------------------------------------------------------------
+  // === Deploy phase =========================================================
+  function isSpawnTile(x, y) {
+    return SPAWN_ROWS.has(y) && passableTerrain(x, y) && !unitAt(x, y);
+  }
+  function placedAllyCount() {
+    return state.units.filter((u) => u.kind === "ally" && !u.isCommander).length;
+  }
+  function remainingDeploy() {
+    return DEPLOY_BUDGET - placedAllyCount();
+  }
+  function selectDeployClass(id) {
+    if (state.phase !== "deploy") return;
+    state.selectedClass = state.selectedClass === id ? null : id;
+    renderAll();
+  }
+  function placeAlly(classId, x, y) {
+    const tmpl = UNIT_CLASSES[classId];
+    if (!tmpl) return;
+    if (remainingDeploy() <= 0) return;
+    if (!isSpawnTile(x, y)) return;
+    state.units.push(makeUnit(tmpl, "ally", x, y));
+    pushLog(`${tmpl.name} deployed at (${x}, ${y}).`, "phase");
+    if (remainingDeploy() <= 0) state.selectedClass = null;
+    renderAll();
+  }
+  function removeAlly(unitId) {
+    const idx = state.units.findIndex((u) => u.id === unitId);
+    if (idx < 0) return;
+    const u = state.units[idx];
+    if (u.isCommander) return; // cannot remove the commander
+    state.units.splice(idx, 1);
+    pushLog(`${u.name} stood down.`, "");
+    renderAll();
+  }
+  function beginBattle() {
+    if (state.phase !== "deploy") return;
+    state.phase = "player";
+    state.selectedClass = null;
+    pushLog(`— Turn 1 —`, "phase");
+    pushLog(`The skirmish begins.`, "phase");
+    renderAll();
+  }
+
+  // === Rendering ============================================================
   function buildBoard() {
     elBoard.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
     const frag = document.createDocumentFragment();
@@ -171,11 +232,9 @@
   function tileAt(x, y) {
     return elBoard.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
   }
-
   function unitEl(id) { return elBoard.querySelector(`.unit[data-id="${id}"]`); }
 
   function renderUnits() {
-    // Remove any unit divs that no longer correspond to a unit in state.
     for (const node of elBoard.querySelectorAll(".unit")) {
       const id = node.dataset.id;
       if (!state.units.find((u) => u.id === id)) node.remove();
@@ -193,7 +252,7 @@
         elBoard.appendChild(node);
       }
       positionUnit(u);
-      node.classList.toggle("acted", u.hasActed && u.hp > 0);
+      node.classList.toggle("acted", u.hasActed && u.hp > 0 && state.phase !== "deploy");
       node.classList.toggle("dead", u.hp <= 0);
       const fill = node.querySelector(".unit-hp-fill");
       const pct = Math.max(0, u.hp / u.maxHp);
@@ -209,44 +268,64 @@
     node.style.transform = `translate(${tile.offsetLeft}px, ${tile.offsetTop}px)`;
   }
 
-  function renderSelection() {
-    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target")) {
-      t.classList.remove("reachable", "selected", "attack-target");
+  function clearTileHighlights() {
+    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable")) {
+      t.classList.remove("reachable", "selected", "attack-target", "spawnable");
     }
-    for (const n of elBoard.querySelectorAll(".unit.selected, .unit.attackable")) {
-      n.classList.remove("selected", "attackable");
+    for (const n of elBoard.querySelectorAll(".unit.selected, .unit.attackable, .unit.removable")) {
+      n.classList.remove("selected", "attackable", "removable");
+    }
+  }
+
+  function renderSelection() {
+    clearTileHighlights();
+    if (state.phase === "deploy") {
+      // Highlight spawn tiles when ready to place.
+      if (state.selectedClass && remainingDeploy() > 0) {
+        for (const y of SPAWN_ROWS) {
+          for (let x = 0; x < COLS; x++) {
+            if (isSpawnTile(x, y)) tileAt(x, y)?.classList.add("spawnable");
+          }
+        }
+      }
+      // Mark removable allies (non-commander) so the player knows they can click.
+      for (const u of state.units) {
+        if (u.kind === "ally" && !u.isCommander) unitEl(u.id)?.classList.add("removable");
+      }
+      return;
     }
     const sel = state.units.find((u) => u.id === state.selectedId);
     if (!sel) return;
-    const selTile = tileAt(sel.x, sel.y);
-    if (selTile) selTile.classList.add("selected");
+    tileAt(sel.x, sel.y)?.classList.add("selected");
     unitEl(sel.id)?.classList.add("selected");
     if (!state.awaitingAttack) {
       for (const k of state.reachable.keys()) {
-        // Skip the start tile in the highlight (still reachable, just don't paint it).
         if (k === key(sel.x, sel.y)) continue;
         const [x, y] = k.split(",").map(Number);
-        const occ = unitAt(x, y);
-        if (occ) continue; // can't end move on an occupied tile
-        const t = tileAt(x, y);
-        if (t) t.classList.add("reachable");
+        if (unitAt(x, y)) continue;
+        tileAt(x, y)?.classList.add("reachable");
       }
     }
     for (const id of state.attackTargets) {
       const target = state.units.find((u) => u.id === id);
       if (!target) continue;
-      const t = tileAt(target.x, target.y);
-      if (t) t.classList.add("attack-target");
+      tileAt(target.x, target.y)?.classList.add("attack-target");
       unitEl(id)?.classList.add("attackable");
     }
   }
 
   function renderHud() {
-    elTurn.textContent = `Turn ${state.turn}`;
-    elPhase.textContent = state.phase === "player" ? "Player phase" :
-                          state.phase === "enemy"  ? "Enemy phase"  :
-                          "Battle over";
+    elTurn.textContent = state.phase === "deploy" ? "Deploy" : `Turn ${state.turn}`;
+    elPhase.textContent =
+      state.phase === "deploy" ? "Muster your army" :
+      state.phase === "player" ? "Player phase" :
+      state.phase === "enemy"  ? "Enemy phase"  :
+      "Battle over";
     elPhase.dataset.phase = state.phase;
+
+    elDeployPanel.classList.toggle("hidden", state.phase !== "deploy");
+    elBattlePanel.classList.toggle("hidden", state.phase === "deploy");
+    elRosterPanel.classList.toggle("hidden", state.phase === "deploy");
 
     const sel = state.units.find((u) => u.id === state.selectedId);
     const canEnd = state.phase === "player" && !state.busy && !state.outcome;
@@ -254,7 +333,20 @@
     const showSkip = state.awaitingAttack && sel && sel.kind === "ally";
     elSkipAttack.classList.toggle("hidden", !showSkip);
 
-    if (state.outcome) {
+    elDeployRemaining.textContent = String(remainingDeploy());
+    elDeployStart.disabled = state.phase !== "deploy";
+
+    if (state.phase === "deploy") {
+      if (state.selectedClass) {
+        elStatus.textContent = remainingDeploy() > 0
+          ? `Click a cyan spawn tile to place ${UNIT_CLASSES[state.selectedClass].name}, or click a placed ally to remove it.`
+          : "Roster full — click Begin Battle.";
+      } else if (remainingDeploy() === DEPLOY_BUDGET) {
+        elStatus.textContent = "Pick a class to deploy, or hit Begin Battle to fight solo.";
+      } else {
+        elStatus.textContent = "Pick another class to deploy, or hit Begin Battle when ready.";
+      }
+    } else if (state.outcome) {
       elStatus.textContent = state.outcome === "win" ? "Victory." : "Defeated.";
     } else if (state.busy) {
       elStatus.textContent = "Resolving…";
@@ -263,12 +355,34 @@
     } else if (state.awaitingAttack) {
       const n = state.attackTargets.size;
       elStatus.textContent = n > 0
-        ? `Click a highlighted enemy to attack, or Skip.`
+        ? "Click a highlighted enemy to attack, or Skip."
         : "No enemies in range. Click Skip to end this unit's turn.";
     } else if (sel) {
       elStatus.textContent = `Click a highlighted tile to move ${sel.name}.`;
     } else {
-      elStatus.textContent = "Click a unit to act.";
+      elStatus.textContent = "Click one of your units to act.";
+    }
+  }
+
+  function renderDeployPanel() {
+    if (state.phase !== "deploy") return;
+    elDeployClasses.innerHTML = CLASS_ORDER.map((id) => {
+      const c = UNIT_CLASSES[id];
+      const isSelected = state.selectedClass === id;
+      const disabled = remainingDeploy() <= 0 && !isSelected;
+      return `
+        <button type="button" class="deploy-class ${isSelected ? "selected" : ""}"
+                data-class="${id}" ${disabled ? "disabled" : ""}>
+          <span class="deploy-class-sprite">${spriteSvg(c.sprite, { small: true })}</span>
+          <span class="deploy-class-meta">
+            <strong>${c.name}</strong>
+            <small>HP ${c.maxHp} · ⚔ ${c.atk} · 🛡 ${c.def}</small>
+            <small>Move ${c.moveRange} · Range ${c.attackRange}</small>
+          </span>
+        </button>`;
+    }).join("");
+    for (const btn of elDeployClasses.querySelectorAll("button[data-class]")) {
+      btn.addEventListener("click", () => selectDeployClass(btn.dataset.class));
     }
   }
 
@@ -276,12 +390,13 @@
     const items = state.units.map((u) => {
       const pct = Math.max(0, u.hp / u.maxHp) * 100;
       const status = u.hp <= 0 ? "fallen" : u.hasActed ? "acted" : "ready";
+      const tag = u.isCommander ? " · cmdr" : "";
       return `
         <li class="roster-row roster-${u.kind} roster-${status}">
           <span class="roster-sprite">${spriteSvg(u.sprite, { small: true })}</span>
           <span class="roster-meta">
             <strong>${u.name}</strong>
-            <small>⚔ ${u.atk} · 🛡 ${u.def}${u.hp <= 0 ? " · fallen" : u.hasActed ? " · acted" : ""}</small>
+            <small>⚔ ${u.atk} · 🛡 ${u.def} · Rng ${u.attackRange}${tag}</small>
           </span>
           <span class="roster-bar">
             <span class="roster-bar-fill" style="width:${pct}%"></span>
@@ -302,6 +417,7 @@
     renderUnits();
     renderSelection();
     renderHud();
+    renderDeployPanel();
     renderRoster();
   }
 
@@ -310,13 +426,28 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
   }
 
-  // --- Interaction ----------------------------------------------------------
+  // === Interaction ==========================================================
   function onTileClick(x, y) {
-    if (state.busy || state.outcome || state.phase !== "player") return;
+    if (state.busy || state.outcome) return;
     const clicked = unitAt(x, y);
 
-    // Awaiting attack: clicking an attackable enemy commits the attack;
-    // clicking anything else cancels (the unit ends its turn without attacking).
+    if (state.phase === "deploy") {
+      // Click a placed ally → remove it.
+      if (clicked && clicked.kind === "ally" && !clicked.isCommander) {
+        removeAlly(clicked.id);
+        return;
+      }
+      // Click a spawn tile with a class selected → place.
+      if (state.selectedClass && isSpawnTile(x, y)) {
+        placeAlly(state.selectedClass, x, y);
+        return;
+      }
+      return;
+    }
+
+    if (state.phase !== "player") return;
+
+    // Awaiting attack: clicking a target commits attack; else cancel.
     if (state.awaitingAttack) {
       if (clicked && state.attackTargets.has(clicked.id)) {
         doAttack(state.selectedId, clicked.id);
@@ -325,17 +456,15 @@
       }
       return;
     }
-
-    // Click on a fresh ally → select it.
+    // Fresh ally → select.
     if (clicked && clicked.kind === "ally" && !clicked.hasActed) {
       selectUnit(clicked.id);
       return;
     }
-    // Click on a reachable empty tile while a unit is selected → move there.
+    // Reachable empty tile while selected → move.
     if (state.selectedId && state.reachable.has(key(x, y))) {
       const dest = unitAt(x, y);
       if (dest) {
-        // Selecting another ally just changes selection.
         if (dest.kind === "ally" && !dest.hasActed && dest.id !== state.selectedId) {
           selectUnit(dest.id);
         }
@@ -344,7 +473,6 @@
       doMove(state.selectedId, x, y);
       return;
     }
-    // Otherwise: clear selection.
     clearSelection();
   }
 
@@ -369,7 +497,6 @@
   async function doMove(unitId, x, y) {
     const u = state.units.find((x) => x.id === unitId);
     if (!u) return;
-    const cost = state.reachable.get(key(x, y)) ?? 0;
     state.busy = true;
     renderHud();
     u.x = x; u.y = y;
@@ -378,8 +505,7 @@
     await sleep(240);
     state.busy = false;
 
-    // After move: check for adjacent enemies. If any, await attack-or-skip.
-    state.attackTargets = adjacentEnemiesOf(u);
+    state.attackTargets = enemiesInRange(u);
     state.reachable = new Map();
     if (state.attackTargets.size > 0) {
       state.awaitingAttack = true;
@@ -415,8 +541,7 @@
     await sleep(360);
     if (target.hp <= 0) {
       pushLog(`${target.name} falls!`, "kill");
-      const tNode = unitEl(target.id);
-      if (tNode) tNode.classList.add("dying");
+      unitEl(target.id)?.classList.add("dying");
       await sleep(420);
     }
     renderUnits();
@@ -444,7 +569,7 @@
     void endPlayerPhase();
   }
 
-  // --- Phase transitions ----------------------------------------------------
+  // === Phase transitions ====================================================
   async function endPlayerPhase() {
     if (checkOutcome()) return;
     state.phase = "enemy";
@@ -465,28 +590,44 @@
   }
 
   async function runEnemyPhase() {
-    const cmdr = commander();
-    if (!cmdr) return;
     for (const e of livingEnemies()) {
       if (state.outcome) return;
       await enemyTakeTurn(e);
     }
   }
 
+  function pickEnemyTarget(enemy) {
+    // Prefer the closest living ally. Tie-break: commander > others (commander
+    // is high-value, so finishing him is the win condition).
+    const allies = livingAllies();
+    if (allies.length === 0) return null;
+    allies.sort((a, b) => {
+      const da = manhattan(enemy, a), db = manhattan(enemy, b);
+      if (da !== db) return da - db;
+      if (a.isCommander && !b.isCommander) return -1;
+      if (!a.isCommander && b.isCommander) return 1;
+      return 0;
+    });
+    return allies[0];
+  }
+
   async function enemyTakeTurn(enemy) {
-    const cmdr = commander();
-    if (!cmdr || enemy.hp <= 0) return;
+    if (enemy.hp <= 0) return;
+    const target = pickEnemyTarget(enemy);
+    if (!target) return;
     const reach = reachableFrom(enemy, enemy.moveRange);
-    // Score each reachable tile by Manhattan distance to the commander.
-    // Tie-break by preferring lower cost (closer to the start = safer).
-    let best = { x: enemy.x, y: enemy.y, dist: manhattan(enemy, cmdr), cost: 0 };
+    // Score each reachable tile by "how far from being able to attack the
+    // target". 0 means we can attack from there; higher means we need to
+    // close more distance. Ties: prefer shorter movement.
+    let best = { x: enemy.x, y: enemy.y, score: Math.max(0, manhattan(enemy, target) - enemy.attackRange), cost: 0 };
     for (const [k, cost] of reach) {
       const [x, y] = k.split(",").map(Number);
       const occ = unitAt(x, y);
       if (occ && occ.id !== enemy.id) continue;
-      const d = manhattan({ x, y }, cmdr);
-      if (d < best.dist || (d === best.dist && cost < best.cost)) {
-        best = { x, y, dist: d, cost };
+      const d = manhattan({ x, y }, target);
+      const score = Math.max(0, d - enemy.attackRange);
+      if (score < best.score || (score === best.score && cost < best.cost)) {
+        best = { x, y, score, cost };
       }
     }
     if (best.x !== enemy.x || best.y !== enemy.y) {
@@ -498,26 +639,25 @@
       await sleep(280);
       state.busy = false;
     }
-    if (manhattan(enemy, cmdr) === 1 && cmdr.hp > 0) {
+    if (manhattan(enemy, target) <= enemy.attackRange && target.hp > 0) {
       state.busy = true;
       renderHud();
-      await resolveAttack(enemy, cmdr);
+      await resolveAttack(enemy, target);
     }
     enemy.hasActed = true;
   }
 
-  // --- Outcome --------------------------------------------------------------
+  // === Outcome ==============================================================
   function checkOutcome() {
     if (state.outcome) return true;
     const cmdr = commander();
-    const enemies = livingEnemies();
     if (!cmdr || cmdr.hp <= 0) {
       state.outcome = "loss";
       state.phase = "done";
       onLoss();
       return true;
     }
-    if (enemies.length === 0) {
+    if (livingEnemies().length === 0) {
       state.outcome = "win";
       state.phase = "done";
       onWin();
@@ -558,26 +698,16 @@
     renderAll();
   }
 
-  function showOutcomeModal() {
-    elOutcomeBackdrop.classList.remove("hidden");
-    elOutcomeModal.classList.remove("hidden");
-  }
-  function hideOutcomeModal() {
-    elOutcomeBackdrop.classList.add("hidden");
-    elOutcomeModal.classList.add("hidden");
-  }
+  function showOutcomeModal() { elOutcomeBackdrop.classList.remove("hidden"); elOutcomeModal.classList.remove("hidden"); }
+  function hideOutcomeModal() { elOutcomeBackdrop.classList.add("hidden"); elOutcomeModal.classList.add("hidden"); }
 
   function applyReward(xp, gold) {
-    // Read the idle save, add xp/gold, cascade level-ups, write back.
     let save;
     try {
       const raw = localStorage.getItem(IDLE_SAVE_KEY);
       save = raw ? JSON.parse(raw) : null;
     } catch { save = null; }
-    if (!save) {
-      // No idle save yet (player started in tactics). Nothing to credit.
-      return { startLevel: 0, endLevel: 0, levelsGained: 0 };
-    }
+    if (!save) return { startLevel: 0, endLevel: 0, levelsGained: 0 };
     const startLevel = save.level || 1;
     save.gold = (save.gold || 0) + gold;
     save.xp = (save.xp || 0) + xp;
@@ -598,7 +728,7 @@
     return { startLevel, endLevel: save.level, levelsGained };
   }
 
-  // --- Combat animations ----------------------------------------------------
+  // === Combat animations ====================================================
   function animateAttack(attacker, target) {
     const node = unitEl(attacker.id);
     if (!node) return;
@@ -618,7 +748,6 @@
       setTimeout(() => tNode.classList.remove("hit"), 320);
     }
   }
-
   function popDamage(target, value) {
     const node = unitEl(target.id);
     if (!node) return;
@@ -629,32 +758,97 @@
     setTimeout(() => span.remove(), 850);
   }
 
-  // --- Sprites --------------------------------------------------------------
-  function spriteSvg(kind, opts) {
-    const small = opts?.small;
-    if (kind === "commander") return commanderSvg(small);
-    if (kind === "goblin")    return goblinSvg(small);
-    return "";
+  // === Sprites ==============================================================
+  function spriteSvg(kind, _opts) {
+    switch (kind) {
+      case "commander":    return commanderSvg();
+      case "warrior":      return warriorSvg();
+      case "archer":       return archerSvg();
+      case "mage":         return mageSvg();
+      case "goblin":       return goblinSvg();
+      case "goblinArcher": return goblinArcherSvg();
+      default:             return "";
+    }
   }
 
   function commanderSvg() {
-    const body = "#7a8090", skin = "#f4c592", leg = "#2c2240", blade = "#c0c4cc";
     return `
 <svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
-  <rect x="33" y="88" width="9" height="22" rx="3" fill="${leg}"/>
-  <rect x="48" y="88" width="9" height="22" rx="3" fill="${leg}"/>
-  <rect x="28" y="48" width="34" height="44" rx="6" fill="${body}" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <rect x="33" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="28" y="48" width="34" height="44" rx="6" fill="#7a8090" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
   <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
-  <rect x="23" y="52" width="8" height="26" rx="3" fill="${body}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
-  <circle cx="45" cy="32" r="13" fill="${skin}" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+  <rect x="23" y="52" width="8" height="26" rx="3" fill="#7a8090" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+  <circle cx="45" cy="32" r="13" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+  <!-- gold circlet so the commander reads as the leader -->
+  <path d="M32 28 Q45 18 58 28" stroke="#ffd86b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
   <circle cx="50" cy="32" r="1.7" fill="#222"/>
   <g>
-    <rect x="60" y="50" width="8" height="26" rx="3" fill="${body}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
-    <rect x="63" y="20" width="3" height="44" fill="${blade}" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
+    <rect x="60" y="50" width="8" height="26" rx="3" fill="#7a8090" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <rect x="63" y="20" width="3" height="44" fill="#c0c4cc" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
     <rect x="58" y="62" width="13" height="3" fill="#5a3a1a"/>
     <rect x="62" y="64" width="5" height="7" fill="#3a2c00"/>
   </g>
+</svg>`;
+  }
+
+  function warriorSvg() {
+    return `
+<svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
+  <rect x="33" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="28" y="48" width="34" height="44" rx="6" fill="#8a3a2a" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
+  <!-- shield arm -->
+  <rect x="20" y="54" width="11" height="22" rx="3" fill="#3a7aa0" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <circle cx="25.5" cy="64" r="2" fill="#ffd86b"/>
+  <circle cx="45" cy="32" r="13" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+  <circle cx="50" cy="32" r="1.7" fill="#222"/>
+  <!-- axe arm -->
+  <rect x="60" y="50" width="8" height="26" rx="3" fill="#8a3a2a"/>
+  <rect x="63" y="30" width="3" height="34" fill="#5a3a1a"/>
+  <path d="M58 28 L74 28 L70 38 L62 38 Z" fill="#c0c4cc" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
+</svg>`;
+  }
+
+  function archerSvg() {
+    return `
+<svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
+  <rect x="33" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
+  <rect x="28" y="48" width="34" height="44" rx="6" fill="#4a6a2a" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
+  <!-- hood -->
+  <path d="M32 28 Q45 14 58 28 L58 38 L32 38 Z" fill="#2e4a18"/>
+  <circle cx="45" cy="34" r="9" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+  <circle cx="50" cy="34" r="1.5" fill="#222"/>
+  <!-- bow + drawn arrow -->
+  <rect x="58" y="50" width="8" height="26" rx="3" fill="#4a6a2a"/>
+  <path d="M70 28 Q86 56 70 84" stroke="#5a3a1a" stroke-width="3" fill="none"/>
+  <line x1="70" y1="28" x2="70" y2="84" stroke="#dadada" stroke-width="1"/>
+  <rect x="68" y="54" width="18" height="2" fill="#dadada"/>
+  <path d="M86 55 L82 51 L82 59 Z" fill="#c0c4cc"/>
+</svg>`;
+  }
+
+  function mageSvg() {
+    return `
+<svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
+  <!-- robe -->
+  <path d="M20 110 L28 50 L62 50 L70 110 Z" fill="#3a4aaa" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.4)"/>
+  <!-- pointed hood -->
+  <path d="M30 38 Q45 6 60 38 L58 42 L32 42 Z" fill="#2a3478" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <circle cx="45" cy="40" r="6.5" fill="#f4c592"/>
+  <circle cx="48" cy="40" r="1.4" fill="#222"/>
+  <!-- staff -->
+  <rect x="66" y="20" width="3" height="80" fill="#5a3a1a"/>
+  <circle cx="67.5" cy="18" r="7" fill="#ff8af0" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <circle cx="65.5" cy="16" r="2" fill="#fff" opacity="0.6"/>
 </svg>`;
   }
 
@@ -676,7 +870,28 @@
 </svg>`;
   }
 
-  // --- Lifecycle ------------------------------------------------------------
+  function goblinArcherSvg() {
+    return `
+<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <ellipse cx="50" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
+  <rect x="36" y="86" width="9" height="22" rx="3" fill="#3a2c00"/>
+  <rect x="55" y="86" width="9" height="22" rx="3" fill="#3a2c00"/>
+  <rect x="30" y="52" width="40" height="40" rx="6" fill="#6a8a3a" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <circle cx="50" cy="36" r="14" fill="#8aaf50" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
+  <path d="M36 32 L28 28 L36 40 Z" fill="#8aaf50"/>
+  <path d="M64 32 L72 28 L64 40 Z" fill="#8aaf50"/>
+  <circle cx="44" cy="36" r="2" fill="#ff3333"/>
+  <circle cx="56" cy="36" r="2" fill="#ff3333"/>
+  <!-- bow -->
+  <path d="M16 30 Q4 56 16 82" stroke="#5a3a1a" stroke-width="3" fill="none"/>
+  <line x1="16" y1="30" x2="16" y2="82" stroke="#dadada" stroke-width="1"/>
+  <!-- arrow nocked -->
+  <rect x="14" y="55" width="20" height="2" fill="#dadada"/>
+  <path d="M34 56 L30 52 L30 60 Z" fill="#c0c4cc"/>
+</svg>`;
+  }
+
+  // === Lifecycle ============================================================
   async function fetchVersion() {
     try {
       const r = await fetch("/health");
@@ -684,15 +899,13 @@
       return data.version || "?";
     } catch { return "?"; }
   }
-
   function reposAllUnits() { for (const u of state.units) positionUnit(u); }
 
   function startNewBattle() {
     state = freshBattle();
     log = [];
     for (const node of elBoard.querySelectorAll(".unit")) node.remove();
-    pushLog("— Turn 1 —", "phase");
-    pushLog("The skirmish begins. Click your commander.", "phase");
+    pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");
     renderAll();
     hideOutcomeModal();
   }
@@ -701,10 +914,10 @@
   elEndTurn.addEventListener("click", endTurnNow);
   elSkipAttack.addEventListener("click", skipAttack);
   elOutcomeAgain.addEventListener("click", startNewBattle);
+  elDeployStart.addEventListener("click", beginBattle);
 
   buildBoard();
-  pushLog("— Turn 1 —", "phase");
-  pushLog("The skirmish begins. Click your commander.", "phase");
+  pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");
   renderAll();
   fetchVersion().then((v) => { elVersion.textContent = `v${v}`; });
 })();

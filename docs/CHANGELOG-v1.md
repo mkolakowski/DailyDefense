@@ -5,6 +5,50 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-06-18
+
+### Added — Deploy phase + unit classes ("Operation Muster Roll")
+- **Deploy phase before every skirmish.** The battle now opens on a
+  new `phase: "deploy"` step: the commander auto-deploys at the back,
+  and the player picks classes from a sidebar roster + clicks cyan
+  spawn tiles to place up to **3 additional allies**. Spawn zone is
+  the bottom two rows of the map (any passable tile). Clicking a
+  placed ally removes it; pressing **Begin Battle** transitions to
+  Player phase Turn 1.
+- **Three ally classes** alongside the commander:
+  | Class    | HP | ⚔ | 🛡 | Move | Range |
+  |----------|----|---|---|------|-------|
+  | Warrior  | 30 | 6 | 2 | 3    | 1     |
+  | Archer   | 18 | 5 | 0 | 3    | 2     |
+  | Mage     | 16 | 8 | 0 | 2    | 2     |
+  Each class has a fresh SVG sprite — Warrior with shield + axe,
+  Archer with a hood + drawn bow, Mage with pointed hood + glowing
+  staff. The class buttons in the sidebar preview the sprite + full
+  stat line.
+- **Attack range generalised.** Combat now uses each unit's
+  `attackRange` (Manhattan distance). Melee = 1, bows / spells = 2.
+  Post-move attack targeting highlights every enemy within range,
+  not just adjacent ones, so Archers and Mages can shoot over a
+  forest tile.
+- **Goblin Archer enemy variant.** A new enemy type (HP 14 · ⚔ 5 ·
+  Range 2 · Move 3) replaces one of the three goblins on the starting
+  map. Its sprite carries a bow and quiver.
+- **Smarter enemy targeting.** Each enemy now picks the closest living
+  ally as its target (tie-breaking toward the commander), rather than
+  always pathing to the commander. Pathing scores reachable tiles by
+  how much further they need to close to get into attack range —
+  ranged enemies stop and shoot from range 2 instead of bumping into
+  melee.
+
+### Changed
+- Top HUD phase chip shows `Deploy · Muster your army` during the
+  new phase (gold), then flips to `Turn N · Player phase` once the
+  battle starts.
+- "Skirmish again" now returns you to the deploy screen rather than
+  re-running the previous loadout.
+- Roster rows show each unit's attack range (`Rng N`) and tag the
+  commander with `· cmdr` so the win-condition unit is obvious.
+
 ## [1.4.0] — 2026-06-18
 
 ### Added — Tactics combat loop ("Operation Skirmish Line")

@@ -27,7 +27,7 @@ Running list of work items for DailyDefense. Move items into the changelog
         10×8 map, click-to-move commander.
   - [x] v1.4.0 "Operation Skirmish Line" — enemy units, turn structure,
         basic melee combat, win/loss detection, reward back into idle save.
-  - [ ] v1.5.0 "Operation Muster Roll" — pre-battle deploy screen, 2–3
+  - [x] v1.5.0 "Operation Muster Roll" — pre-battle deploy screen, 2–3
         unit classes with different move + attack ranges.
   - [ ] v1.6.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
