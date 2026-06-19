@@ -5,6 +5,31 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] — 2026-06-18
+
+### Added — Default loadout ("Operation Standing Roster")
+- **All three classes deploy by default.** Every skirmish now starts
+  with the full party already on the field:
+  | Unit       | Position | Why                                  |
+  |------------|----------|--------------------------------------|
+  | Commander  | (1, 7)   | back-left, the win-condition unit    |
+  | Warrior    | (3, 6)   | one row forward — melee closes fast  |
+  | Archer     | (6, 7)   | back row, shoots from range 3        |
+  | Mage       | (8, 7)   | far-right back row, range 3 + atk 8  |
+  Total controllable party = **4** (commander + Warrior + Archer +
+  Mage). Initiative still rolls 1d20+mod for everyone, so the order
+  is fresh every battle even with the same loadout.
+- **Deploy panel becomes a roster review.** You can still tap a
+  placed ally to stand them down and slot in a different class
+  (DEPLOY_BUDGET bumped 2 → 3 to fit the trio), but the friction is
+  gone: hit **Begin Battle** and the default formation marches.
+
+### Changed
+- Deploy panel header now reads "Deploy Allies (N slots open)"
+  rather than "(N slots)" — clearer that 0 = full squad.
+- Default-formation status text: "Default formation deployed — hit
+  Begin Battle, or tap an ally to swap."
+
 ## [1.7.0] — 2026-06-18
 
 ### Added — Ranged attacks read clearly ("Operation Long Shot")

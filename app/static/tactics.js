@@ -36,6 +36,13 @@
     goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "goblinArcher" },
   };
   const COMMANDER_START = { x: 1, y: 7 };
+  // Default loadout: one of every class. Warrior pushed forward so the melee
+  // fighter closes faster; Archer + Mage sit on the back row to shoot.
+  const DEFAULT_ALLY_LOADOUT = [
+    { classId: "warrior", x: 3, y: 6 },
+    { classId: "archer",  x: 6, y: 7 },
+    { classId: "mage",    x: 8, y: 7 },
+  ];
   const ENEMY_STARTS = [
     { type: "goblin",       x: 7, y: 0 },
     { type: "goblinArcher", x: 9, y: 0 },
@@ -45,7 +52,7 @@
   ];
   // Deploy zone: bottom two rows of the map.
   const SPAWN_ROWS = new Set([6, 7]);
-  const DEPLOY_BUDGET = 2; // commander + 2 deployable = 3 total controllable
+  const DEPLOY_BUDGET = 3; // commander + 3 deployable = full party of four
 
   // === Initiative ===========================================================
   // 1d20 + modifier per sprite. Ties: ally beats enemy, then creation order.
@@ -100,6 +107,8 @@
     return {
       units: [
         makeUnit(COMMANDER, "ally", COMMANDER_START.x, COMMANDER_START.y),
+        ...DEFAULT_ALLY_LOADOUT.map((d) =>
+          makeUnit(UNIT_CLASSES[d.classId], "ally", d.x, d.y)),
         ...ENEMY_STARTS.map((p) => makeUnit(ENEMY_TYPES[p.type], "enemy", p.x, p.y)),
       ],
       phase: "deploy", // "deploy" | "battle" | "done"
@@ -457,8 +466,10 @@
     if (state.phase === "deploy") {
       if (state.selectedClass) {
         elStatus.textContent = remainingDeploy() > 0
-          ? `Click a cyan spawn tile to place ${UNIT_CLASSES[state.selectedClass].name}, or click a placed ally to remove.`
+          ? `Tap a cyan spawn tile to place ${UNIT_CLASSES[state.selectedClass].name}, or tap a placed ally to remove.`
           : "Squad full — Begin Battle when ready.";
+      } else if (remainingDeploy() === 0) {
+        elStatus.textContent = "Default formation deployed — hit Begin Battle, or tap an ally to swap.";
       } else if (remainingDeploy() === DEPLOY_BUDGET) {
         elStatus.textContent = "Pick a class to deploy, or Begin Battle to fight solo.";
       } else {
