@@ -5,6 +5,18 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] — 2026-06-19
+
+### Changed — Allies share lanes ("Operation Open Lanes")
+- **BFS now lets same-kind units pass through each other.** An
+  ally pathing the grid can walk through another ally's tile (and
+  vice versa for enemies); only opposite-kind units block the lane.
+- The destination tile must still be empty — the end-of-move
+  occupancy check sits in `renderSelection` and `onTileClick` and
+  was already correct, so no other change was needed.
+- Fixes the Fire-Emblem-style frustration of a Warrior parked at
+  (3, 7) walling off the Archer and Mage behind him.
+
 ## [1.14.0] — 2026-06-19
 
 ### Added — Test mode ("Operation Sandbox")

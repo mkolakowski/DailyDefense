@@ -200,8 +200,12 @@
       for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
         const nx = cur.x + dx, ny = cur.y + dy;
         if (!passableTerrain(nx, ny)) continue;
+        // Same-kind units (ally/ally or enemy/enemy) can be path-walked
+        // through; opposite-kind blocks the lane. The destination tile
+        // is still required to be empty — that check sits in
+        // renderSelection and onTileClick.
         const occ = unitAt(nx, ny);
-        if (occ && occ.id !== unit.id) continue;
+        if (occ && occ.id !== unit.id && occ.kind !== unit.kind) continue;
         const next = cur.cost + 1;
         const k = key(nx, ny);
         if (visited.has(k) && visited.get(k) <= next) continue;

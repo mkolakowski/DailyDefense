@@ -54,6 +54,9 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.14.0 "Operation Sandbox" — test mode behind `?test=1`
         with god mode, one-shot kill, fast animations, tile coords
         overlay, party heal, skip round, insta-win/lose.
+  - [x] v1.15.0 "Operation Open Lanes" — allies (and enemies) can
+        path through same-kind units; opposite-kind still blocks.
+        End-of-move tile still must be empty.
   - [ ] **Pokemon-style stat block.** Add **Speed, Strength, Attack,
         Defense, Special Attack, Special Defense** to every unit.
         Speed already implicitly exists via initiative; broaden into
@@ -72,7 +75,7 @@ Running list of work items for DailyDefense. Move items into the changelog
         if still alive. Mirrors Fire Emblem's combat model.
   - [ ] v1.16.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.17.0 "Operation War Drum" — animations, AI improvements.
+  - [ ] v1.17.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 
