@@ -23,9 +23,9 @@
 
   // === Unit templates =======================================================
   const UNIT_CLASSES = {
-    warrior: { name: "Warrior", maxHp: 30, atk: 6, def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
-    archer:  { name: "Archer",  maxHp: 18, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "archer"  },
-    mage:    { name: "Mage",    maxHp: 16, atk: 8, def: 0, moveRange: 2, attackRange: 3, sprite: "mage"    },
+    warrior: { name: "Warrior", maxHp: 40, atk: 8,  def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
+    archer:  { name: "Archer",  maxHp: 26, atk: 7,  def: 0, moveRange: 3, attackRange: 3, sprite: "archer"  },
+    mage:    { name: "Mage",    maxHp: 22, atk: 10, def: 0, moveRange: 2, attackRange: 3, sprite: "mage"    },
   };
   const CLASS_ORDER = ["warrior", "archer", "mage"];
   const ENEMY_TYPES = {

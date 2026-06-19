@@ -46,6 +46,11 @@ Running list of work items for DailyDefense. Move items into the changelog
         to full-party wipe.
   - [x] v1.11.0 "Operation Even Odds" — enemy count dropped 5 → 4
         (removed the (9, 3) Goblin Archer) to ease the 3v5 fight.
+  - [x] v1.12.0 "Operation Target Lock" — max-range threat zone
+        outline; click-to-engage auto-paths to the cheapest tile
+        that puts the target in attack range, then strikes.
+  - [x] v1.13.0 "Operation Battle Hardened" — ally HP and attack
+        bumped across the board (party HP 64 → 88, +2 atk each).
   - [ ] **Pokemon-style stat block.** Add **Speed, Strength, Attack,
         Defense, Special Attack, Special Defense** to every unit.
         Speed already implicitly exists via initiative; broaden into
@@ -62,9 +67,9 @@ Running list of work items for DailyDefense. Move items into the changelog
         defender), both should resolve attacks in one exchange:
         higher-Speed entity attacks first, defender counter-attacks
         if still alive. Mirrors Fire Emblem's combat model.
-  - [ ] v1.12.0 "Operation Cartographer" — procedural map generation
+  - [ ] v1.14.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.13.0 "Operation War Drum" — animations, AI improvements.
+  - [ ] v1.15.0 "Operation War Drum" — animations, AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

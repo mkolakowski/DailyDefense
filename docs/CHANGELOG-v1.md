@@ -5,6 +5,24 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] — 2026-06-19
+
+### Changed — Player buffs ("Operation Battle Hardened")
+- Ally classes get more HP and a bit more punch across the board:
+  | Class    | HP (was → now) | ⚔ (was → now) |
+  |----------|----------------|----------------|
+  | Warrior  | 30 → **40**    | 6 → **8**      |
+  | Archer   | 18 → **26**    | 5 → **7**      |
+  | Mage     | 16 → **22**    | 8 → **10**     |
+- Total party HP: 64 → **88** (+38%). Each ally hits ~2 harder
+  per swing.
+- Mage now one-shots Goblin Archers (10 atk vs 0 def = 10 dmg vs 14
+  HP → wait, 10 not enough, two shots). Two-shots them, anyway.
+  Warrior + Archer kill base Goblins in 3 hits (vs the 4–5 it used
+  to take Archer). Enemies still hit equally hard but allies last
+  meaningfully longer — Archer survives ~7 Goblin hits (was ~4),
+  Mage survives ~5 (was ~4).
+
 ## [1.12.0] — 2026-06-19
 
 ### Added — Max-range view + click-to-engage ("Operation Target Lock")
