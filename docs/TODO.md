@@ -46,6 +46,22 @@ Running list of work items for DailyDefense. Move items into the changelog
         to full-party wipe.
   - [x] v1.11.0 "Operation Even Odds" — enemy count dropped 5 → 4
         (removed the (9, 3) Goblin Archer) to ease the 3v5 fight.
+  - [ ] **Pokemon-style stat block.** Add **Speed, Strength, Attack,
+        Defense, Special Attack, Special Defense** to every unit.
+        Speed already implicitly exists via initiative; broaden into
+        a per-unit number. Strength can drive raw melee damage
+        (separately from the hit-roll Attack stat); Special Attack
+        / Defense govern Mage spells and ranged magic.
+  - [ ] **Wire existing mechanics to the new stat block.** Re-derive
+        melee damage from `Strength - Defense`, ranged/magic damage
+        from `Special Attack - Special Defense`, initiative rolls
+        from `1d20 + Speed/4` (or similar), and surface the stats on
+        the deploy class cards + roster panel.
+  - [ ] **Speed-decides-first combat exchanges.** When two units
+        engage in a single "battle" on the map (attacker swings at
+        defender), both should resolve attacks in one exchange:
+        higher-Speed entity attacks first, defender counter-attacks
+        if still alive. Mirrors Fire Emblem's combat model.
   - [ ] v1.12.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
   - [ ] v1.13.0 "Operation War Drum" — animations, AI improvements.

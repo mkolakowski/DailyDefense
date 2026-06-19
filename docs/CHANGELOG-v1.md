@@ -5,6 +5,40 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] — 2026-06-19
+
+### Added — Max-range view + click-to-engage ("Operation Target Lock")
+- **Max-range threat zone.** The pink dashed outline that used to
+  mark only the current tile's attack range now shows the **union of
+  attack range from every reachable tile** — i.e. every spot the
+  player could hit after picking any of their move destinations. One
+  glance tells you the full extent of your reach this turn.
+- **In-range enemy outline matches the new zone.** The pink ring +
+  sprite glow now lights up every enemy in the max-range zone (not
+  just enemies you could hit without moving), so it's obvious who's
+  a viable target for this turn.
+- **Click an enemy → auto-path + attack.** Tapping any
+  outlined-in-range enemy now finds the cheapest reachable tile that
+  puts the target in attack range, walks the unit there, and
+  triggers the attack — no need to manually click a move tile then
+  the target. Clicking your own tile still works as "stay put → go
+  to attack-or-skip." If no path puts the enemy in range, the click
+  is a no-op (matches existing behavior).
+
+### Changed
+- The in-range preview pink dashes used to differentiate between
+  "current tile reach" and "post-move reach" — now they're a single
+  uniform max-range zone since the auto-path engages from anywhere
+  in it.
+
+### TODO additions (tactics roadmap)
+- Pokemon-style stat block (Speed, Strength, Attack, Defense,
+  Special Attack, Special Defense) on every unit.
+- Wire existing mechanics — damage formula, initiative roll, deploy
+  card display — to the new stats.
+- Speed-decides-first combat exchanges (Fire-Emblem-style counter-
+  attack on engage; higher Speed strikes first).
+
 ## [1.11.0] — 2026-06-19
 
 ### Changed — Difficulty nerf ("Operation Even Odds")

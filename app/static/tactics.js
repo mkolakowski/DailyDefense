@@ -399,23 +399,33 @@
         if (unitAt(x, y)) continue;
         tileAt(x, y)?.classList.add("reachable");
       }
-      // Outline the geometric attack range from the current tile so the
-      // player can see where their swings/shots will reach without moving.
-      for (let dy = -cur.attackRange; dy <= cur.attackRange; dy++) {
-        for (let dx = -cur.attackRange; dx <= cur.attackRange; dx++) {
-          const d = Math.abs(dx) + Math.abs(dy);
-          if (d === 0 || d > cur.attackRange) continue;
-          const nx = cur.x + dx, ny = cur.y + dy;
-          if (!inBounds(nx, ny)) continue;
-          tileAt(nx, ny)?.classList.add("attack-range");
+      // Outline the *max* attack-range zone: every tile that could be
+      // attacked from any reachable move destination. This shows the
+      // player their full threat coverage for the turn, not just their
+      // reach from the current tile.
+      const threat = new Set();
+      for (const moveKey of state.reachable.keys()) {
+        const [rx, ry] = moveKey.split(",").map(Number);
+        for (let dy = -cur.attackRange; dy <= cur.attackRange; dy++) {
+          for (let dx = -cur.attackRange; dx <= cur.attackRange; dx++) {
+            const d = Math.abs(dx) + Math.abs(dy);
+            if (d === 0 || d > cur.attackRange) continue;
+            const nx = rx + dx, ny = ry + dy;
+            if (!inBounds(nx, ny)) continue;
+            threat.add(key(nx, ny));
+          }
         }
       }
-      // Hint: outline enemies you could attack from the current tile so
-      // the player knows whether to stay put or move. Applies to melee
-      // and ranged alike.
+      for (const tk of threat) {
+        if (tk === key(cur.x, cur.y)) continue;
+        const [x, y] = tk.split(",").map(Number);
+        tileAt(x, y)?.classList.add("attack-range");
+      }
+      // Outline every enemy that lands in the threat zone — these are the
+      // ones the player can engage via auto-path.
       for (const other of state.units) {
         if (other.hp <= 0 || other.kind === cur.kind) continue;
-        if (manhattan(cur, other) <= cur.attackRange) {
+        if (threat.has(key(other.x, other.y))) {
           tileAt(other.x, other.y)?.classList.add("attack-range-preview");
           unitEl(other.id)?.classList.add("in-range-preview");
         }
@@ -610,10 +620,60 @@
       return;
     }
 
-    if (state.reachable.has(key(x, y))) {
-      if (clicked && clicked.id !== cur.id) return; // can't stop on someone else
+    // Click own tile → stay put (skip move, jump to attack-or-skip).
+    if (clicked && clicked.id === cur.id) {
+      doMove(cur.id, cur.x, cur.y);
+      return;
+    }
+
+    // Click an enemy → auto-path to the closest reachable tile that puts
+    // them in attack range, then strike.
+    if (clicked && clicked.kind !== cur.kind && clicked.hp > 0) {
+      const spot = bestAttackSpot(cur, clicked);
+      if (spot) autoPathAndAttack(cur.id, spot.x, spot.y, clicked.id);
+      return;
+    }
+
+    // Click an empty reachable tile → move there.
+    if (!clicked && state.reachable.has(key(x, y))) {
       doMove(cur.id, x, y);
     }
+  }
+
+  // Find the cheapest reachable tile from which `unit` can attack `target`.
+  // Returns { x, y } or null if no such tile exists in the current move set.
+  function bestAttackSpot(unit, target) {
+    let best = null;
+    let bestCost = Infinity;
+    for (const [k, cost] of state.reachable) {
+      const [x, y] = k.split(",").map(Number);
+      const occ = unitAt(x, y);
+      // Can't end the move on someone else (own tile is fine — cost 0).
+      if (occ && occ.id !== unit.id) continue;
+      if (manhattan({ x, y }, target) > unit.attackRange) continue;
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = { x, y };
+      }
+    }
+    return best;
+  }
+
+  async function autoPathAndAttack(unitId, mx, my, targetId) {
+    const u = state.units.find((x) => x.id === unitId);
+    if (!u) return;
+    const dist = manhattan({ x: u.x, y: u.y }, { x: mx, y: my });
+    if (dist > 0) {
+      state.busy = true;
+      renderHud();
+      u.x = mx; u.y = my;
+      positionUnit(u);
+      pushLog(`${u.name} closes on the target — (${mx}, ${my}).`, "move");
+      await sleep(240);
+      state.busy = false;
+    }
+    state.reachable = new Map();
+    await doAttack(unitId, targetId);
   }
 
   async function doMove(unitId, x, y) {
