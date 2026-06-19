@@ -44,10 +44,11 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.10.0 "Operation Stand Down" — commander retired; squad
         trimmed to Warrior + Archer + Mage; loss condition flipped
         to full-party wipe.
-  - [ ] v1.11.0 "Operation Cartographer" — procedural map generation
+  - [x] v1.11.0 "Operation Even Odds" — enemy count dropped 5 → 4
+        (removed the (9, 3) Goblin Archer) to ease the 3v5 fight.
+  - [ ] v1.12.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.12.0 "Operation War Drum" — animations, AI improvements,
-        commander reads idle-save equipment.
+  - [ ] v1.13.0 "Operation War Drum" — animations, AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

@@ -43,7 +43,6 @@
     { type: "goblin",       x: 7, y: 0 },
     { type: "goblinArcher", x: 9, y: 0 },
     { type: "goblin",       x: 8, y: 2 },
-    { type: "goblinArcher", x: 9, y: 3 },
     { type: "goblin",       x: 8, y: 4 },
   ];
   // Deploy zone: bottom two rows of the map.

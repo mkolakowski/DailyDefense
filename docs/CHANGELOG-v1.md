@@ -5,6 +5,22 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] — 2026-06-19
+
+### Changed — Difficulty nerf ("Operation Even Odds")
+- **Enemy count dropped 5 → 4.** Removed the Goblin Archer that was
+  parked at (9, 3) — the more aggressive of the two archers, since
+  it sat closer to the action and could rapidly close on the back
+  row. The (9, 0) Goblin Archer stays, so ranged enemy pressure is
+  reduced but not eliminated.
+- Composition is now **3 Goblins + 1 Goblin Archer = 4** vs the
+  party's **Warrior + Archer + Mage = 3**. Tighter 4v3 instead of
+  the 5v3 that v1.10's commander removal left.
+
+### Note
+- Total enemy HP drops to **74** (from 88) — closer to the party's
+  64 HP pool, but enemies still have the numerical advantage.
+
 ## [1.10.0] — 2026-06-19
 
 ### Changed — Commander removed; squad of three ("Operation Stand Down")
