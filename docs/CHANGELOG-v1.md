@@ -5,6 +5,38 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] — 2026-06-19
+
+### Added — Test mode ("Operation Sandbox")
+- **`?test=1` URL flag enables a sandbox panel** in the tactics
+  sidebar. Persisted in `localStorage` so refreshes stay in test mode
+  until "Exit Test Mode" is pressed or the key is cleared.
+- A red **TEST** chip pins to the HUD whenever the mode is active.
+- **Toggles:**
+  - **God mode** — every attack on an ally deals 0 damage.
+  - **One-shot kill** — every ally attack does `target.maxHp`
+    damage (so anyone dies in one swing).
+  - **Fast animations** — caps `sleep()` waits at 60ms (~one frame
+    at 60fps) so combat resolution flies by.
+  - **Show tile coords** — overlays each tile with its `x,y` so
+    coordinate-driven debugging stops requiring counting.
+- **One-tap actions:**
+  - **Heal Party** — restores every living ally to `maxHp`.
+  - **Skip Round** — marks every unit as "acted" and advances to a
+    fresh round (good for testing round transitions / initiative
+    re-ordering).
+  - **Insta-Win** / **Insta-Lose** — drop all enemies / allies to 0
+    HP and pop the appropriate outcome modal. Insta-Win **does NOT**
+    apply XP/gold to the idle save (so testing doesn't pollute
+    real progress).
+- **Exit Test Mode** clears the localStorage flag, strips `?test=1`
+  from the URL, and reloads — clean way out.
+
+### Note
+- All test hooks are no-ops when `testModeOn === false`, so the
+  surface area for normal users is just the unused checkbox/button
+  markup hidden behind `.hidden`.
+
 ## [1.13.0] — 2026-06-19
 
 ### Changed — Player buffs ("Operation Battle Hardened")

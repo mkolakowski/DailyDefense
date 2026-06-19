@@ -75,6 +75,29 @@
   const IDLE_SAVE_KEY = "dailydefense.idle.v1";
   const xpForLevel = (level) => Math.floor(40 * Math.pow(level, 1.65));
 
+  // === Test mode ============================================================
+  // Enabled via ?test=1 in the URL; persisted in localStorage so refresh
+  // keeps it on. Click "Exit Test Mode" in the sidebar (or clear
+  // localStorage) to leave. Insta-Win bypasses the idle-save reward so
+  // testing doesn't pollute the player's XP/gold.
+  const TEST_KEY = "dailydefense.tactics.testMode";
+  function loadTestMode() {
+    try {
+      if (new URLSearchParams(window.location.search).has("test")) {
+        localStorage.setItem(TEST_KEY, "1");
+        return true;
+      }
+      return localStorage.getItem(TEST_KEY) === "1";
+    } catch { return false; }
+  }
+  const testModeOn = loadTestMode();
+  const testFlags = {
+    godMode: false,
+    oneShot: false,
+    fastMode: false,
+    showCoords: false,
+  };
+
   // === State ================================================================
   let nextUnitId = 1;
   function makeUnit(tmpl, kind, x, y) {
@@ -161,7 +184,10 @@
     if (log.length > MAX_LOG) log.length = MAX_LOG;
     renderLog();
   }
-  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  function sleep(ms) {
+    if (testModeOn && testFlags.fastMode) ms = Math.min(ms, 60);
+    return new Promise((r) => setTimeout(r, ms));
+  }
 
   // === BFS reachability =====================================================
   function reachableFrom(unit, range) {
@@ -316,6 +342,10 @@
         tile.className = `tile terrain-${terrainAt(x, y)}`;
         tile.dataset.x = String(x);
         tile.dataset.y = String(y);
+        const coords = document.createElement("span");
+        coords.className = "tile-coords";
+        coords.textContent = `${x},${y}`;
+        tile.appendChild(coords);
         tile.addEventListener("click", () => onTileClick(x, y));
         frag.appendChild(tile);
       }
@@ -719,7 +749,11 @@
   }
 
   async function resolveAttack(attacker, target) {
-    const dmg = Math.max(1, attacker.atk - target.def);
+    let dmg = Math.max(1, attacker.atk - target.def);
+    if (testModeOn) {
+      if (testFlags.godMode && target.kind === "ally") dmg = 0;
+      if (testFlags.oneShot && attacker.kind === "ally") dmg = target.maxHp;
+    }
     target.hp = Math.max(0, target.hp - dmg);
     const ranged = manhattan(attacker, target) > 1;
     const verb = ranged ? "shoots" : "hits";
@@ -1026,6 +1060,76 @@
 </svg>`;
   }
 
+  // === Test-mode actions ====================================================
+  function testHealParty() {
+    if (!testModeOn) return;
+    for (const a of state.units.filter((u) => u.kind === "ally")) a.hp = a.maxHp;
+    pushLog("Test: party healed to full.", "phase");
+    renderAll();
+  }
+  function testInstaWin() {
+    if (!testModeOn || state.outcome) return;
+    for (const e of livingEnemies()) e.hp = 0;
+    pushLog("Test: enemies wiped.", "kill");
+    state.outcome = "win";
+    state.phase = "done";
+    elOutcomeTitle.textContent = "Victory (Test)";
+    elOutcomeTitle.className = "outcome-title win";
+    elOutcomeBody.innerHTML = `
+      <p>Test-mode insta-win. Idle save not modified.</p>
+      <p class="muted">Use Skirmish Again to reset the board.</p>
+    `;
+    elOutcomeAgain.disabled = false;
+    showOutcomeModal();
+    renderAll();
+  }
+  function testInstaLose() {
+    if (!testModeOn || state.outcome) return;
+    for (const a of livingAllies()) a.hp = 0;
+    pushLog("Test: party wiped.", "death");
+    state.outcome = "loss";
+    state.phase = "done";
+    elOutcomeTitle.textContent = "Defeated (Test)";
+    elOutcomeTitle.className = "outcome-title loss";
+    elOutcomeBody.innerHTML = `
+      <p>Test-mode insta-loss.</p>
+      <p class="muted">Use Skirmish Again to reset the board.</p>
+    `;
+    elOutcomeAgain.disabled = false;
+    showOutcomeModal();
+    renderAll();
+  }
+  async function testSkipRound() {
+    if (!testModeOn || state.phase !== "battle" || state.outcome || state.busy) return;
+    for (const u of state.units) u.hasActed = true;
+    state.currentTurnIndex = state.initiativeOrder.length;
+    pushLog("Test: skipping to next round.", "phase");
+    await beginTurn();
+  }
+  function testExitMode() {
+    try { localStorage.removeItem(TEST_KEY); } catch {}
+    const url = new URL(window.location.href);
+    url.searchParams.delete("test");
+    window.location.replace(url.toString());
+  }
+  function wireTestPanel() {
+    if (!testModeOn) return;
+    $("test-panel")?.classList.remove("hidden");
+    $("test-chip")?.classList.remove("hidden");
+    $("test-god").addEventListener("change", (e) => { testFlags.godMode = e.target.checked; });
+    $("test-oneshot").addEventListener("change", (e) => { testFlags.oneShot = e.target.checked; });
+    $("test-fast").addEventListener("change", (e) => { testFlags.fastMode = e.target.checked; });
+    $("test-coords").addEventListener("change", (e) => {
+      testFlags.showCoords = e.target.checked;
+      elBoard.classList.toggle("show-coords", e.target.checked);
+    });
+    $("test-heal").addEventListener("click", testHealParty);
+    $("test-skip-round").addEventListener("click", testSkipRound);
+    $("test-win").addEventListener("click", testInstaWin);
+    $("test-lose").addEventListener("click", testInstaLose);
+    $("test-exit").addEventListener("click", testExitMode);
+  }
+
   // === Lifecycle ============================================================
   async function fetchVersion() {
     try {
@@ -1051,7 +1155,9 @@
   elDeployStart.addEventListener("click", beginBattle);
 
   buildBoard();
+  wireTestPanel();
   pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");
+  if (testModeOn) pushLog("Test mode active. Bypass controls in the red sidebar panel.", "phase");
   renderAll();
   fetchVersion().then((v) => { elVersion.textContent = `v${v}`; });
 })();

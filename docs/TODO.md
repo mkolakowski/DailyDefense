@@ -51,6 +51,9 @@ Running list of work items for DailyDefense. Move items into the changelog
         that puts the target in attack range, then strikes.
   - [x] v1.13.0 "Operation Battle Hardened" — ally HP and attack
         bumped across the board (party HP 64 → 88, +2 atk each).
+  - [x] v1.14.0 "Operation Sandbox" — test mode behind `?test=1`
+        with god mode, one-shot kill, fast animations, tile coords
+        overlay, party heal, skip round, insta-win/lose.
   - [ ] **Pokemon-style stat block.** Add **Speed, Strength, Attack,
         Defense, Special Attack, Special Defense** to every unit.
         Speed already implicitly exists via initiative; broaden into
@@ -67,9 +70,9 @@ Running list of work items for DailyDefense. Move items into the changelog
         defender), both should resolve attacks in one exchange:
         higher-Speed entity attacks first, defender counter-attacks
         if still alive. Mirrors Fire Emblem's combat model.
-  - [ ] v1.14.0 "Operation Cartographer" — procedural map generation
+  - [ ] v1.16.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.15.0 "Operation War Drum" — animations, AI improvements.
+  - [ ] v1.17.0 "Operation War Drum" — animations, AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

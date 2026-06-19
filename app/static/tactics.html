@@ -22,6 +22,7 @@
     <span class="muted">Tactics — Skirmish</span>
   </div>
   <div class="hud-right">
+    <span class="phase-chip test-chip hidden" id="test-chip" title="Test mode active">TEST</span>
     <span class="phase-chip" id="battle-turn">Deploy</span>
     <span class="phase-chip phase-state" id="battle-phase" data-phase="deploy">Muster your army</span>
   </div>
@@ -42,6 +43,23 @@
   </section>
 
   <aside class="tactics-sidebar">
+    <section class="panel test-panel hidden" id="test-panel">
+      <h3>Test Mode</h3>
+      <div class="test-toggles">
+        <label class="test-toggle"><input type="checkbox" id="test-god"> God mode <span class="muted">(allies invuln)</span></label>
+        <label class="test-toggle"><input type="checkbox" id="test-oneshot"> One-shot kill <span class="muted">(allies)</span></label>
+        <label class="test-toggle"><input type="checkbox" id="test-fast"> Fast animations</label>
+        <label class="test-toggle"><input type="checkbox" id="test-coords"> Show tile coords</label>
+      </div>
+      <div class="test-buttons">
+        <button type="button" class="action-btn ghost" id="test-heal">Heal Party</button>
+        <button type="button" class="action-btn ghost" id="test-skip-round">Skip Round</button>
+        <button type="button" class="action-btn ghost" id="test-win">Insta-Win</button>
+        <button type="button" class="action-btn ghost" id="test-lose">Insta-Lose</button>
+      </div>
+      <button type="button" class="action-btn test-exit" id="test-exit" style="margin-top: 10px; width: 100%;">Exit Test Mode</button>
+    </section>
+
     <section class="panel" id="deploy-panel">
       <h3>Deploy Allies (<span id="deploy-remaining">0</span> slots open)</h3>
       <div id="deploy-classes" class="deploy-classes"></div>

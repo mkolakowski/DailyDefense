@@ -662,6 +662,67 @@ a { color: var(--md-sys-color-primary); }
   border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
+/* Test mode --------------------------------------------------------------- */
+.phase-chip.test-chip {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.test-panel {
+  border: 1px solid rgba(255, 107, 138, 0.45);
+  background:
+    linear-gradient(180deg,
+      rgba(255, 107, 138, 0.06) 0%,
+      transparent 60%),
+    var(--md-sys-color-surface-container);
+}
+.test-panel h3 { color: var(--md-sys-color-error); }
+.test-toggles { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.test-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.test-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--md-sys-color-error);
+}
+.test-toggle .muted { font-size: 11px; }
+.test-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.test-buttons .action-btn { flex: 0 1 auto; min-width: 0; min-height: 36px; font-size: 13px; }
+.action-btn.test-exit {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+
+/* Tile coords overlay (test-mode only) ----------------------------------- */
+.tile-coords {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  font-family: var(--md-sys-typescale-mono);
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 0 2px rgba(0,0,0,0.85);
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+}
+.tactics-board.show-coords .tile-coords { display: block; }
+
 /* Footer ------------------------------------------------------------------ */
 .tactics-footer {
   display: flex;
