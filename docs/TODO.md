@@ -32,9 +32,12 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.6.0 "Operation Roll for Initiative" — D&D-style per-unit
         initiative order (1d20+mod), squad capped at 3 controllable
         characters (commander + 2), five enemies, touch-input pass.
-  - [ ] v1.7.0 "Operation Cartographer" — procedural map generation
+  - [x] v1.7.0 "Operation Long Shot" — ranged classes bumped to
+        range 3, projectile animations (arrows + magic bolts),
+        in-range preview for ranged units' turns.
+  - [ ] v1.8.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.8.0 "Operation War Drum" — animations, AI improvements,
+  - [ ] v1.9.0 "Operation War Drum" — animations, AI improvements,
         commander reads idle-save equipment.
 
 ## Material Design migration (carried over from 0.9.0)

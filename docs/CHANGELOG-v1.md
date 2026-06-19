@@ -5,6 +5,37 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] — 2026-06-18
+
+### Added — Ranged attacks read clearly ("Operation Long Shot")
+- **Ranged classes bumped to range 3.**
+  | Class         | Range (was) | Range (now) |
+  |---------------|-------------|-------------|
+  | Archer        | 2           | **3**       |
+  | Mage          | 2           | **3**       |
+  | Goblin Archer | 2           | **3**       |
+  Range 2 was barely felt at deploy distances; range 3 means an
+  Archer or Mage who clicks their own tile (no move) on turn 1 can
+  reach most enemies on the far side of the map.
+- **Projectile animations.** Ranged attacks now visually launch a
+  projectile from the attacker's tile to the target's tile:
+  - Archer / Goblin Archer fire a **fletched arrow** (silver tip,
+    wooden shaft, yellow nock) that rotates to match the firing
+    angle and flies in a 300ms linear travel.
+  - Mage hurls a **glowing magenta bolt** with a soft pink halo and a
+    220ms brightness pulse.
+  Melee hits keep the existing lunge-then-shake; ranged hits skip the
+  lunge (the unit didn't move) and play the shake + damage popup
+  when the projectile lands.
+- **In-range preview for ranged units.** When it's a ranged ally's
+  turn, every enemy already shootable from the current tile gets a
+  pink ring on the floor + a glow on the sprite — so the player
+  knows they can stay put and shoot. Melee units skip the preview
+  (adjacency is obvious).
+- **Combat log now reads "shoots" instead of "hits"** when the
+  attacker is more than one tile away, so log scanning makes the
+  range/melee split obvious.
+
 ## [1.6.0] — 2026-06-18
 
 ### Added — D&D initiative + touch support ("Operation Roll for Initiative")

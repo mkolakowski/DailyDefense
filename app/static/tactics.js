@@ -27,13 +27,13 @@
   };
   const UNIT_CLASSES = {
     warrior: { name: "Warrior", maxHp: 30, atk: 6, def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
-    archer:  { name: "Archer",  maxHp: 18, atk: 5, def: 0, moveRange: 3, attackRange: 2, sprite: "archer"  },
-    mage:    { name: "Mage",    maxHp: 16, atk: 8, def: 0, moveRange: 2, attackRange: 2, sprite: "mage"    },
+    archer:  { name: "Archer",  maxHp: 18, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "archer"  },
+    mage:    { name: "Mage",    maxHp: 16, atk: 8, def: 0, moveRange: 2, attackRange: 3, sprite: "mage"    },
   };
   const CLASS_ORDER = ["warrior", "archer", "mage"];
   const ENEMY_TYPES = {
     goblin:       { name: "Goblin",        maxHp: 20, atk: 4, def: 1, moveRange: 3, attackRange: 1, sprite: "goblin" },
-    goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 2, sprite: "goblinArcher" },
+    goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "goblinArcher" },
   };
   const COMMANDER_START = { x: 1, y: 7 };
   const ENEMY_STARTS = [
@@ -367,11 +367,11 @@
   }
 
   function clearTileHighlights() {
-    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable")) {
-      t.classList.remove("reachable", "selected", "attack-target", "spawnable");
+    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable, .tile.attack-range-preview")) {
+      t.classList.remove("reachable", "selected", "attack-target", "spawnable", "attack-range-preview");
     }
-    for (const n of elBoard.querySelectorAll(".unit.attackable, .unit.removable")) {
-      n.classList.remove("attackable", "removable");
+    for (const n of elBoard.querySelectorAll(".unit.attackable, .unit.removable, .unit.in-range-preview")) {
+      n.classList.remove("attackable", "removable", "in-range-preview");
     }
   }
 
@@ -399,6 +399,18 @@
         const [x, y] = k.split(",").map(Number);
         if (unitAt(x, y)) continue;
         tileAt(x, y)?.classList.add("reachable");
+      }
+      // Hint: for ranged units, show which enemies are already shootable
+      // from the current tile so the player knows they can shoot without
+      // moving. Skip for melee — adjacency is obvious.
+      if (cur.attackRange > 1) {
+        for (const other of state.units) {
+          if (other.hp <= 0 || other.kind === cur.kind) continue;
+          if (manhattan(cur, other) <= cur.attackRange) {
+            tileAt(other.x, other.y)?.classList.add("attack-range-preview");
+            unitEl(other.id)?.classList.add("in-range-preview");
+          }
+        }
       }
     }
     for (const id of state.attackTargets) {
@@ -640,9 +652,18 @@
   async function resolveAttack(attacker, target) {
     const dmg = Math.max(1, attacker.atk - target.def);
     target.hp = Math.max(0, target.hp - dmg);
-    pushLog(`${attacker.name} hits ${target.name} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
-    animateAttack(attacker, target);
-    popDamage(target, dmg);
+    const ranged = manhattan(attacker, target) > 1;
+    const verb = ranged ? "shoots" : "hits";
+    pushLog(`${attacker.name} ${verb} ${target.name} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
+    if (ranged) {
+      animateRangedShot(attacker, target);
+      await sleep(300);
+      animateHit(target);
+      popDamage(target, dmg);
+    } else {
+      animateMelee(attacker, target);
+      popDamage(target, dmg);
+    }
     await sleep(360);
     if (target.hp <= 0) {
       pushLog(`${target.name} falls!`, "kill");
@@ -783,24 +804,49 @@
   }
 
   // === Combat animations ====================================================
-  function animateAttack(attacker, target) {
+  function animateMelee(attacker, target) {
     const node = unitEl(attacker.id);
-    if (!node) return;
-    const dx = Math.sign(target.x - attacker.x) * 10;
-    const dy = Math.sign(target.y - attacker.y) * 10;
-    node.style.setProperty("--attack-dx", `${dx}px`);
-    node.style.setProperty("--attack-dy", `${dy}px`);
-    node.classList.remove("attacking");
-    void node.offsetWidth;
-    node.classList.add("attacking");
-    setTimeout(() => node.classList.remove("attacking"), 360);
-    const tNode = unitEl(target.id);
-    if (tNode) {
-      tNode.classList.remove("hit");
-      void tNode.offsetWidth;
-      tNode.classList.add("hit");
-      setTimeout(() => tNode.classList.remove("hit"), 320);
+    if (node) {
+      const dx = Math.sign(target.x - attacker.x) * 10;
+      const dy = Math.sign(target.y - attacker.y) * 10;
+      node.style.setProperty("--attack-dx", `${dx}px`);
+      node.style.setProperty("--attack-dy", `${dy}px`);
+      node.classList.remove("attacking");
+      void node.offsetWidth;
+      node.classList.add("attacking");
+      setTimeout(() => node.classList.remove("attacking"), 360);
     }
+    animateHit(target);
+  }
+  function animateHit(target) {
+    const tNode = unitEl(target.id);
+    if (!tNode) return;
+    tNode.classList.remove("hit");
+    void tNode.offsetWidth;
+    tNode.classList.add("hit");
+    setTimeout(() => tNode.classList.remove("hit"), 320);
+  }
+  function animateRangedShot(attacker, target) {
+    const aTile = tileAt(attacker.x, attacker.y);
+    const tTile = tileAt(target.x, target.y);
+    if (!aTile || !tTile) return;
+    const half = 28; // half of var(--tile-size) = 56
+    const ax = aTile.offsetLeft + half;
+    const ay = aTile.offsetTop + half;
+    const tx = tTile.offsetLeft + half;
+    const ty = tTile.offsetTop + half;
+    const angle = Math.atan2(ty - ay, tx - ax) * 180 / Math.PI;
+    const isBolt = attacker.sprite === "mage";
+    const w = isBolt ? 14 : 20;
+    const h = isBolt ? 14 : 3;
+    const projectile = document.createElement("div");
+    projectile.className = `projectile ${isBolt ? "projectile-bolt" : "projectile-arrow"}`;
+    projectile.style.transform = `translate(${ax - w / 2}px, ${ay - h / 2}px) rotate(${angle}deg)`;
+    elBoard.appendChild(projectile);
+    requestAnimationFrame(() => {
+      projectile.style.transform = `translate(${tx - w / 2}px, ${ty - h / 2}px) rotate(${angle}deg)`;
+    });
+    setTimeout(() => projectile.remove(), 380);
   }
   function popDamage(target, value) {
     const node = unitEl(target.id);
