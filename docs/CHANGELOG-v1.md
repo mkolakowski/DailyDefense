@@ -5,6 +5,36 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] — 2026-06-19
+
+### Changed — Commander removed; squad of three ("Operation Stand Down")
+- **Commander gone from the field.** The grey chainmail unit has been
+  retired. The default loadout is now exactly three player units —
+  **Warrior, Archer, Mage** — spread across the back row at (2, 7),
+  (5, 7), and (8, 7) respectively.
+- **Loss condition flipped.** Previously the skirmish ended when the
+  commander fell. Now: the skirmish is lost only when the **entire
+  party** is wiped. Any single ally going down isn't fatal — you can
+  press on with the survivors.
+- **Enemy AI re-tuned.** Without a designated commander, enemies no
+  longer prefer the "leader." Tie-break now goes to the **lowest-HP
+  ally** so enemies will close the kill on a wounded Mage instead of
+  spreading damage.
+- **UI swept of commander references.** Outcome modal reads "The
+  field is yours" / "Your party has been wiped" instead of the
+  commander-specific wording. Battle and Deploy panel descriptions
+  updated. Roster rows drop the `· cmdr` tag; the initiative track
+  drops the `★` marker.
+- **Dead code removed.** The `commanderSvg()` sprite, the
+  `INITIATIVE_MOD.commander` entry, the `isCommander` unit flag, and
+  the `commander()` helper are gone.
+
+### Note
+- Total ally HP is now 30 + 18 + 16 = **64** (down from 114 with the
+  commander). The fight got materially harder — five enemies vs.
+  three smaller units. If it ends up too punishing in playtest,
+  trimming enemy count or tuning class stats is the next dial.
+
 ## [1.9.0] — 2026-06-18
 
 ### Added — Attack-range outline on the move step ("Operation Strike Zone")

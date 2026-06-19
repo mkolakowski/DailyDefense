@@ -22,9 +22,6 @@
   const IMPASSABLE = new Set(["mountain", "water"]);
 
   // === Unit templates =======================================================
-  const COMMANDER = {
-    name: "Commander", maxHp: 50, atk: 8, def: 2, moveRange: 4, attackRange: 1, sprite: "commander",
-  };
   const UNIT_CLASSES = {
     warrior: { name: "Warrior", maxHp: 30, atk: 6, def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
     archer:  { name: "Archer",  maxHp: 18, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "archer"  },
@@ -35,12 +32,11 @@
     goblin:       { name: "Goblin",        maxHp: 20, atk: 4, def: 1, moveRange: 3, attackRange: 1, sprite: "goblin" },
     goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "goblinArcher" },
   };
-  const COMMANDER_START = { x: 1, y: 7 };
   // Default loadout: one of every class. Warrior pushed forward so the melee
   // fighter closes faster; Archer + Mage sit on the back row to shoot.
   const DEFAULT_ALLY_LOADOUT = [
-    { classId: "warrior", x: 3, y: 6 },
-    { classId: "archer",  x: 6, y: 7 },
+    { classId: "warrior", x: 2, y: 7 },
+    { classId: "archer",  x: 5, y: 7 },
     { classId: "mage",    x: 8, y: 7 },
   ];
   const ENEMY_STARTS = [
@@ -52,12 +48,11 @@
   ];
   // Deploy zone: bottom two rows of the map.
   const SPAWN_ROWS = new Set([6, 7]);
-  const DEPLOY_BUDGET = 3; // commander + 3 deployable = full party of four
+  const DEPLOY_BUDGET = 3; // full party of three (Warrior + Archer + Mage)
 
   // === Initiative ===========================================================
   // 1d20 + modifier per sprite. Ties: ally beats enemy, then creation order.
   const INITIATIVE_MOD = {
-    commander: 2,
     warrior:   1,
     archer:    3,
     mage:      0,
@@ -97,7 +92,6 @@
       moveRange: tmpl.moveRange,
       attackRange: tmpl.attackRange,
       hasActed: false,
-      isCommander: tmpl.sprite === "commander",
       initiative: { roll: 0, mod: 0, total: 0, seq: 0 },
     };
   }
@@ -106,7 +100,6 @@
     nextUnitId = 1;
     return {
       units: [
-        makeUnit(COMMANDER, "ally", COMMANDER_START.x, COMMANDER_START.y),
         ...DEFAULT_ALLY_LOADOUT.map((d) =>
           makeUnit(UNIT_CLASSES[d.classId], "ally", d.x, d.y)),
         ...ENEMY_STARTS.map((p) => makeUnit(ENEMY_TYPES[p.type], "enemy", p.x, p.y)),
@@ -158,7 +151,6 @@
   const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
   const passableTerrain = (x, y) => inBounds(x, y) && !IMPASSABLE.has(terrainAt(x, y));
   const unitAt = (x, y) => state.units.find((u) => u.hp > 0 && u.x === x && u.y === y);
-  const commander = () => state.units.find((u) => u.isCommander);
   const livingEnemies = () => state.units.filter((u) => u.kind === "enemy" && u.hp > 0);
   const livingAllies  = () => state.units.filter((u) => u.kind === "ally"  && u.hp > 0);
   const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -210,7 +202,7 @@
     return SPAWN_ROWS.has(y) && passableTerrain(x, y) && !unitAt(x, y);
   }
   function placedAllyCount() {
-    return state.units.filter((u) => u.kind === "ally" && !u.isCommander).length;
+    return state.units.filter((u) => u.kind === "ally").length;
   }
   function remainingDeploy() {
     return DEPLOY_BUDGET - placedAllyCount();
@@ -234,7 +226,6 @@
     const idx = state.units.findIndex((u) => u.id === unitId);
     if (idx < 0) return;
     const u = state.units[idx];
-    if (u.isCommander) return;
     state.units.splice(idx, 1);
     pushLog(`${u.name} stood down.`, "");
     renderAll();
@@ -395,7 +386,7 @@
         }
       }
       for (const u of state.units) {
-        if (u.kind === "ally" && !u.isCommander) unitEl(u.id)?.classList.add("removable");
+        if (u.kind === "ally") unitEl(u.id)?.classList.add("removable");
       }
       return;
     }
@@ -543,7 +534,7 @@
         <li class="init-row init-${u.kind} ${flags.join(" ")}">
           <span class="init-marker">${isCurrent ? "▶" : ""}</span>
           <span class="init-total">${u.initiative.total}</span>
-          <span class="init-name">${escapeHtml(u.name)}${u.isCommander ? " ★" : ""}</span>
+          <span class="init-name">${escapeHtml(u.name)}</span>
           <span class="init-hp">${Math.max(0, u.hp)}/${u.maxHp}</span>
         </li>`;
     }).join("");
@@ -554,13 +545,12 @@
     const items = state.units.map((u) => {
       const pct = Math.max(0, u.hp / u.maxHp) * 100;
       const status = u.hp <= 0 ? "fallen" : u.hasActed ? "acted" : "ready";
-      const tag = u.isCommander ? " · cmdr" : "";
       return `
         <li class="roster-row roster-${u.kind} roster-${status}">
           <span class="roster-sprite">${spriteSvg(u.sprite, { small: true })}</span>
           <span class="roster-meta">
             <strong>${escapeHtml(u.name)}</strong>
-            <small>⚔ ${u.atk} · 🛡 ${u.def} · Rng ${u.attackRange}${tag}</small>
+            <small>⚔ ${u.atk} · 🛡 ${u.def} · Rng ${u.attackRange}</small>
           </span>
           <span class="roster-bar">
             <span class="roster-bar-fill" style="width:${pct}%"></span>
@@ -597,7 +587,7 @@
     const clicked = unitAt(x, y);
 
     if (state.phase === "deploy") {
-      if (clicked && clicked.kind === "ally" && !clicked.isCommander) {
+      if (clicked && clicked.kind === "ally") {
         removeAlly(clicked.id);
         return;
       }
@@ -702,9 +692,8 @@
     allies.sort((a, b) => {
       const da = manhattan(enemy, a), db = manhattan(enemy, b);
       if (da !== db) return da - db;
-      if (a.isCommander && !b.isCommander) return -1;
-      if (!a.isCommander && b.isCommander) return 1;
-      return 0;
+      // Tie-break: pick the lower-HP ally so enemies finish off the wounded.
+      return a.hp - b.hp;
     });
     return allies[0];
   }
@@ -745,8 +734,7 @@
   // === Outcome ==============================================================
   function checkOutcome() {
     if (state.outcome) return true;
-    const cmdr = commander();
-    if (!cmdr || cmdr.hp <= 0) {
+    if (livingAllies().length === 0) {
       state.outcome = "loss";
       state.phase = "done";
       onLoss();
@@ -770,7 +758,7 @@
     elOutcomeTitle.textContent = "Victory";
     elOutcomeTitle.className = "outcome-title win";
     elOutcomeBody.innerHTML = `
-      <p>The field is yours, commander.</p>
+      <p>The field is yours.</p>
       <p class="outcome-reward">+${REWARD.xp} XP · +${REWARD.gold} gold</p>
       ${lvlText}
       <p class="muted">Rewards added to your idle save.</p>
@@ -781,11 +769,11 @@
   }
 
   function onLoss() {
-    pushLog(`Your commander has fallen. Defeat.`, "death");
+    pushLog(`Your party has been wiped. Defeat.`, "death");
     elOutcomeTitle.textContent = "Defeated";
     elOutcomeTitle.className = "outcome-title loss";
     elOutcomeBody.innerHTML = `
-      <p>Your commander has fallen.</p>
+      <p>Your party has been wiped.</p>
       <p class="muted">No rewards earned. Regroup and try again.</p>
     `;
     elOutcomeAgain.disabled = false;
@@ -881,7 +869,6 @@
   // === Sprites ==============================================================
   function spriteSvg(kind, _opts) {
     switch (kind) {
-      case "commander":    return commanderSvg();
       case "warrior":      return warriorSvg();
       case "archer":       return archerSvg();
       case "mage":         return mageSvg();
@@ -889,27 +876,6 @@
       case "goblinArcher": return goblinArcherSvg();
       default:             return "";
     }
-  }
-
-  function commanderSvg() {
-    return `
-<svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
-  <rect x="33" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
-  <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
-  <rect x="28" y="48" width="34" height="44" rx="6" fill="#7a8090" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
-  <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
-  <rect x="23" y="52" width="8" height="26" rx="3" fill="#7a8090" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
-  <circle cx="45" cy="32" r="13" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
-  <path d="M32 28 Q45 18 58 28" stroke="#ffd86b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <circle cx="50" cy="32" r="1.7" fill="#222"/>
-  <g>
-    <rect x="60" y="50" width="8" height="26" rx="3" fill="#7a8090" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
-    <rect x="63" y="20" width="3" height="44" fill="#c0c4cc" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
-    <rect x="58" y="62" width="13" height="3" fill="#5a3a1a"/>
-    <rect x="62" y="64" width="5" height="7" fill="#3a2c00"/>
-  </g>
-</svg>`;
   }
 
   function warriorSvg() {
