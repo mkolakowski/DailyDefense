@@ -38,9 +38,12 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.8.0 "Operation Standing Roster" — all three player
         classes deploy by default alongside the commander; deploy
         panel becomes a swap-in roster review.
-  - [ ] v1.9.0 "Operation Cartographer" — procedural map generation
+  - [x] v1.9.0 "Operation Strike Zone" — pink dashed perimeter
+        showing the current unit's attack range during the move
+        step; in-range enemy outline extended to melee classes.
+  - [ ] v1.10.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.10.0 "Operation War Drum" — animations, AI improvements,
+  - [ ] v1.11.0 "Operation War Drum" — animations, AI improvements,
         commander reads idle-save equipment.
 
 ## Material Design migration (carried over from 0.9.0)

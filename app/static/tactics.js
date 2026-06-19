@@ -376,8 +376,8 @@
   }
 
   function clearTileHighlights() {
-    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable, .tile.attack-range-preview")) {
-      t.classList.remove("reachable", "selected", "attack-target", "spawnable", "attack-range-preview");
+    for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable, .tile.attack-range-preview, .tile.attack-range")) {
+      t.classList.remove("reachable", "selected", "attack-target", "spawnable", "attack-range-preview", "attack-range");
     }
     for (const n of elBoard.querySelectorAll(".unit.attackable, .unit.removable, .unit.in-range-preview")) {
       n.classList.remove("attackable", "removable", "in-range-preview");
@@ -409,16 +409,25 @@
         if (unitAt(x, y)) continue;
         tileAt(x, y)?.classList.add("reachable");
       }
-      // Hint: for ranged units, show which enemies are already shootable
-      // from the current tile so the player knows they can shoot without
-      // moving. Skip for melee — adjacency is obvious.
-      if (cur.attackRange > 1) {
-        for (const other of state.units) {
-          if (other.hp <= 0 || other.kind === cur.kind) continue;
-          if (manhattan(cur, other) <= cur.attackRange) {
-            tileAt(other.x, other.y)?.classList.add("attack-range-preview");
-            unitEl(other.id)?.classList.add("in-range-preview");
-          }
+      // Outline the geometric attack range from the current tile so the
+      // player can see where their swings/shots will reach without moving.
+      for (let dy = -cur.attackRange; dy <= cur.attackRange; dy++) {
+        for (let dx = -cur.attackRange; dx <= cur.attackRange; dx++) {
+          const d = Math.abs(dx) + Math.abs(dy);
+          if (d === 0 || d > cur.attackRange) continue;
+          const nx = cur.x + dx, ny = cur.y + dy;
+          if (!inBounds(nx, ny)) continue;
+          tileAt(nx, ny)?.classList.add("attack-range");
+        }
+      }
+      // Hint: outline enemies you could attack from the current tile so
+      // the player knows whether to stay put or move. Applies to melee
+      // and ranged alike.
+      for (const other of state.units) {
+        if (other.hp <= 0 || other.kind === cur.kind) continue;
+        if (manhattan(cur, other) <= cur.attackRange) {
+          tileAt(other.x, other.y)?.classList.add("attack-range-preview");
+          unitEl(other.id)?.classList.add("in-range-preview");
         }
       }
     }

@@ -344,7 +344,13 @@ a { color: var(--md-sys-color-primary); }
   50%      { filter: brightness(1.6); }
 }
 
-/* In-range preview (ranged ally's current shot options) -------------------- */
+/* Attack-range outline (geometric reach of the current unit) -------------- */
+.tile.attack-range {
+  outline: 2px dashed rgba(255, 138, 168, 0.6);
+  outline-offset: -4px;
+}
+
+/* In-range preview (any enemy reachable from the current tile) ------------- */
 .tile.attack-range-preview {
   box-shadow: inset 0 0 0 2px rgba(255, 138, 168, 0.8);
 }

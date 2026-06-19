@@ -5,6 +5,25 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] — 2026-06-18
+
+### Added — Attack-range outline on the move step ("Operation Strike Zone")
+- **Pink dashed perimeter** on every tile within the current unit's
+  attack range during the move step. Lets the player see — before
+  picking a destination — exactly where their swings or shots reach
+  from their current spot.
+  - Melee (range 1): the 4 adjacent tiles.
+  - Ranged (range 3): the full Manhattan-3 diamond, even across
+    impassable terrain.
+  - Drawn with a CSS `outline: 2px dashed` at `-4px` offset so it
+    coexists with the cyan movement fill without fighting it.
+- **In-range enemy outline extended to melee classes.** The pink
+  ring + sprite glow that previously only fired for Archer / Mage /
+  Goblin Archer now also lights up for the Commander, Warrior, and
+  Goblin when an enemy is sitting in their melee range. The rule is
+  now "any enemy within `attackRange` from your current tile gets
+  outlined," uniformly.
+
 ## [1.8.0] — 2026-06-18
 
 ### Added — Default loadout ("Operation Standing Roster")
