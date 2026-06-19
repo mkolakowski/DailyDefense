@@ -38,17 +38,40 @@
   const COMMANDER_START = { x: 1, y: 7 };
   const ENEMY_STARTS = [
     { type: "goblin",       x: 7, y: 0 },
+    { type: "goblinArcher", x: 9, y: 0 },
     { type: "goblin",       x: 8, y: 2 },
-    { type: "goblinArcher", x: 6, y: 4 },
+    { type: "goblinArcher", x: 9, y: 3 },
+    { type: "goblin",       x: 8, y: 4 },
   ];
   // Deploy zone: bottom two rows of the map.
   const SPAWN_ROWS = new Set([6, 7]);
-  const DEPLOY_BUDGET = 3;
+  const DEPLOY_BUDGET = 2; // commander + 2 deployable = 3 total controllable
+
+  // === Initiative ===========================================================
+  // 1d20 + modifier per sprite. Ties: ally beats enemy, then creation order.
+  const INITIATIVE_MOD = {
+    commander: 2,
+    warrior:   1,
+    archer:    3,
+    mage:      0,
+    goblin:    1,
+    goblinArcher: 2,
+  };
+  function rollInitiative(unit, seq) {
+    const roll = Math.floor(Math.random() * 20) + 1;
+    const mod = INITIATIVE_MOD[unit.sprite] ?? 0;
+    unit.initiative = { roll, mod, total: roll + mod, seq };
+  }
+  function compareInitiative(a, b) {
+    if (a.initiative.total !== b.initiative.total) return b.initiative.total - a.initiative.total;
+    if (a.kind === "ally" && b.kind !== "ally") return -1;
+    if (b.kind === "ally" && a.kind !== "ally") return 1;
+    return a.initiative.seq - b.initiative.seq;
+  }
 
   // === Rewards / persistence ================================================
   const REWARD = { xp: 50, gold: 30 };
   const IDLE_SAVE_KEY = "dailydefense.idle.v1";
-  // Mirrors xpForLevel() in game.js so tactics level-ups use the idle curve.
   const xpForLevel = (level) => Math.floor(40 * Math.pow(level, 1.65));
 
   // === State ================================================================
@@ -68,6 +91,7 @@
       attackRange: tmpl.attackRange,
       hasActed: false,
       isCommander: tmpl.sprite === "commander",
+      initiative: { roll: 0, mod: 0, total: 0, seq: 0 },
     };
   }
 
@@ -78,9 +102,10 @@
         makeUnit(COMMANDER, "ally", COMMANDER_START.x, COMMANDER_START.y),
         ...ENEMY_STARTS.map((p) => makeUnit(ENEMY_TYPES[p.type], "enemy", p.x, p.y)),
       ],
-      phase: "deploy", // "deploy" | "player" | "enemy" | "done"
-      turn: 1,
-      selectedId: null,
+      phase: "deploy", // "deploy" | "battle" | "done"
+      round: 1,
+      initiativeOrder: [], // unit ids in turn order
+      currentTurnIndex: 0,
       selectedClass: null,
       reachable: new Map(),
       attackTargets: new Set(),
@@ -102,15 +127,16 @@
   const elLog = $("tactics-log");
   const elTurn = $("battle-turn");
   const elPhase = $("battle-phase");
-  const elEndTurn = $("battle-end-turn");
-  const elSkipAttack = $("battle-skip-attack");
-  const elRoster = $("unit-roster");
+  const elSkip = $("battle-skip");
   const elDeployPanel = $("deploy-panel");
   const elBattlePanel = $("battle-panel");
+  const elInitiativePanel = $("initiative-panel");
   const elRosterPanel = $("roster-panel");
   const elDeployRemaining = $("deploy-remaining");
   const elDeployClasses = $("deploy-classes");
   const elDeployStart = $("deploy-start");
+  const elInitiativeList = $("initiative-list");
+  const elRoster = $("unit-roster");
   const elOutcomeBackdrop = $("outcome-backdrop");
   const elOutcomeModal = $("outcome-modal");
   const elOutcomeTitle = $("outcome-title");
@@ -127,6 +153,8 @@
   const livingEnemies = () => state.units.filter((u) => u.kind === "enemy" && u.hp > 0);
   const livingAllies  = () => state.units.filter((u) => u.kind === "ally"  && u.hp > 0);
   const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const currentUnit = () => state.units.find((u) => u.id === state.initiativeOrder[state.currentTurnIndex]);
+  const isMyTurn = (u) => state.phase === "battle" && currentUnit()?.id === u.id;
 
   function pushLog(text, kind) {
     log.unshift({ text, kind: kind || "" });
@@ -197,18 +225,86 @@
     const idx = state.units.findIndex((u) => u.id === unitId);
     if (idx < 0) return;
     const u = state.units[idx];
-    if (u.isCommander) return; // cannot remove the commander
+    if (u.isCommander) return;
     state.units.splice(idx, 1);
     pushLog(`${u.name} stood down.`, "");
     renderAll();
   }
   function beginBattle() {
     if (state.phase !== "deploy") return;
-    state.phase = "player";
+    // Roll initiative for every unit, assign creation-order seq for tiebreak.
+    state.units.forEach((u, i) => rollInitiative(u, i));
+    const sorted = [...state.units].sort(compareInitiative);
+    state.initiativeOrder = sorted.map((u) => u.id);
+    state.currentTurnIndex = 0;
+    state.round = 1;
+    state.phase = "battle";
     state.selectedClass = null;
-    pushLog(`— Turn 1 —`, "phase");
-    pushLog(`The skirmish begins.`, "phase");
+    pushLog(`— Round 1 — Initiative rolled.`, "phase");
+    for (const u of sorted) {
+      pushLog(`  ${u.name}: ${u.initiative.total} (d20=${u.initiative.roll}${u.initiative.mod >= 0 ? "+" : ""}${u.initiative.mod})`, "init");
+    }
     renderAll();
+    void beginTurn();
+  }
+
+  // === Battle turn loop =====================================================
+  async function beginTurn() {
+    if (state.outcome) return;
+    // Skip dead or non-existent units.
+    while (state.currentTurnIndex < state.initiativeOrder.length) {
+      const u = currentUnit();
+      if (u && u.hp > 0) break;
+      state.currentTurnIndex += 1;
+    }
+    if (state.currentTurnIndex >= state.initiativeOrder.length) {
+      // End of round → new round, reset hasActed.
+      state.round += 1;
+      state.currentTurnIndex = 0;
+      for (const u of state.units) u.hasActed = false;
+      pushLog(`— Round ${state.round} —`, "phase");
+      // Re-skip dead units at the top of the new round.
+      return beginTurn();
+    }
+    const u = currentUnit();
+    if (!u) return;
+
+    state.attackTargets = new Set();
+    state.awaitingAttack = false;
+
+    if (u.kind === "ally") {
+      state.reachable = reachableFrom(u, u.moveRange);
+      renderAll();
+    } else {
+      state.reachable = new Map();
+      renderAll();
+      await sleep(500);
+      await enemyTakeTurn(u);
+      if (checkOutcome()) return;
+      await endCurrentTurn();
+    }
+  }
+
+  async function endCurrentTurn() {
+    if (state.outcome) return;
+    const u = currentUnit();
+    if (u) u.hasActed = true;
+    state.currentTurnIndex += 1;
+    state.reachable = new Map();
+    state.attackTargets = new Set();
+    state.awaitingAttack = false;
+    renderAll();
+    await sleep(120);
+    await beginTurn();
+  }
+
+  function skipCurrentTurn() {
+    if (state.phase !== "battle" || state.busy || state.outcome) return;
+    const u = currentUnit();
+    if (!u || u.kind !== "ally") return;
+    if (state.awaitingAttack) pushLog(`${u.name} holds the line.`, "");
+    else pushLog(`${u.name} waits.`, "");
+    void endCurrentTurn();
   }
 
   // === Rendering ============================================================
@@ -252,8 +348,10 @@
         elBoard.appendChild(node);
       }
       positionUnit(u);
-      node.classList.toggle("acted", u.hasActed && u.hp > 0 && state.phase !== "deploy");
+      const dimmed = u.hp > 0 && u.hasActed && state.phase === "battle";
+      node.classList.toggle("acted", dimmed);
       node.classList.toggle("dead", u.hp <= 0);
+      node.classList.toggle("active-turn", isMyTurn(u) && u.hp > 0);
       const fill = node.querySelector(".unit-hp-fill");
       const pct = Math.max(0, u.hp / u.maxHp);
       fill.style.width = `${pct * 100}%`;
@@ -272,15 +370,14 @@
     for (const t of elBoard.querySelectorAll(".tile.reachable, .tile.selected, .tile.attack-target, .tile.spawnable")) {
       t.classList.remove("reachable", "selected", "attack-target", "spawnable");
     }
-    for (const n of elBoard.querySelectorAll(".unit.selected, .unit.attackable, .unit.removable")) {
-      n.classList.remove("selected", "attackable", "removable");
+    for (const n of elBoard.querySelectorAll(".unit.attackable, .unit.removable")) {
+      n.classList.remove("attackable", "removable");
     }
   }
 
   function renderSelection() {
     clearTileHighlights();
     if (state.phase === "deploy") {
-      // Highlight spawn tiles when ready to place.
       if (state.selectedClass && remainingDeploy() > 0) {
         for (const y of SPAWN_ROWS) {
           for (let x = 0; x < COLS; x++) {
@@ -288,19 +385,17 @@
           }
         }
       }
-      // Mark removable allies (non-commander) so the player knows they can click.
       for (const u of state.units) {
         if (u.kind === "ally" && !u.isCommander) unitEl(u.id)?.classList.add("removable");
       }
       return;
     }
-    const sel = state.units.find((u) => u.id === state.selectedId);
-    if (!sel) return;
-    tileAt(sel.x, sel.y)?.classList.add("selected");
-    unitEl(sel.id)?.classList.add("selected");
+    const cur = currentUnit();
+    if (!cur || cur.kind !== "ally" || state.outcome) return;
+    tileAt(cur.x, cur.y)?.classList.add("selected");
     if (!state.awaitingAttack) {
       for (const k of state.reachable.keys()) {
-        if (k === key(sel.x, sel.y)) continue;
+        if (k === key(cur.x, cur.y)) continue;
         const [x, y] = k.split(",").map(Number);
         if (unitAt(x, y)) continue;
         tileAt(x, y)?.classList.add("reachable");
@@ -315,52 +410,63 @@
   }
 
   function renderHud() {
-    elTurn.textContent = state.phase === "deploy" ? "Deploy" : `Turn ${state.turn}`;
-    elPhase.textContent =
-      state.phase === "deploy" ? "Muster your army" :
-      state.phase === "player" ? "Player phase" :
-      state.phase === "enemy"  ? "Enemy phase"  :
-      "Battle over";
-    elPhase.dataset.phase = state.phase;
-
     elDeployPanel.classList.toggle("hidden", state.phase !== "deploy");
     elBattlePanel.classList.toggle("hidden", state.phase === "deploy");
+    elInitiativePanel.classList.toggle("hidden", state.phase === "deploy");
     elRosterPanel.classList.toggle("hidden", state.phase === "deploy");
 
-    const sel = state.units.find((u) => u.id === state.selectedId);
-    const canEnd = state.phase === "player" && !state.busy && !state.outcome;
-    elEndTurn.disabled = !canEnd;
-    const showSkip = state.awaitingAttack && sel && sel.kind === "ally";
-    elSkipAttack.classList.toggle("hidden", !showSkip);
+    if (state.phase === "deploy") {
+      elTurn.textContent = "Deploy";
+      elPhase.textContent = "Muster your army";
+      elPhase.dataset.phase = "deploy";
+    } else {
+      const u = currentUnit();
+      elTurn.textContent = `Round ${state.round}`;
+      if (state.outcome) {
+        elPhase.textContent = state.outcome === "win" ? "Victory" : "Defeated";
+        elPhase.dataset.phase = "done";
+      } else if (u) {
+        elPhase.textContent = `${u.name}'s turn`;
+        elPhase.dataset.phase = u.kind;
+      } else {
+        elPhase.textContent = "Battle";
+        elPhase.dataset.phase = "battle";
+      }
+    }
 
+    const cur = currentUnit();
+    const myAllyTurn = state.phase === "battle" && cur && cur.kind === "ally" && !state.outcome;
+    elSkip.classList.toggle("hidden", !myAllyTurn);
+    elSkip.textContent = state.awaitingAttack ? "Skip Attack" : "Skip Turn";
+    elSkip.disabled = state.busy;
     elDeployRemaining.textContent = String(remainingDeploy());
     elDeployStart.disabled = state.phase !== "deploy";
 
     if (state.phase === "deploy") {
       if (state.selectedClass) {
         elStatus.textContent = remainingDeploy() > 0
-          ? `Click a cyan spawn tile to place ${UNIT_CLASSES[state.selectedClass].name}, or click a placed ally to remove it.`
-          : "Roster full — click Begin Battle.";
+          ? `Click a cyan spawn tile to place ${UNIT_CLASSES[state.selectedClass].name}, or click a placed ally to remove.`
+          : "Squad full — Begin Battle when ready.";
       } else if (remainingDeploy() === DEPLOY_BUDGET) {
-        elStatus.textContent = "Pick a class to deploy, or hit Begin Battle to fight solo.";
+        elStatus.textContent = "Pick a class to deploy, or Begin Battle to fight solo.";
       } else {
-        elStatus.textContent = "Pick another class to deploy, or hit Begin Battle when ready.";
+        elStatus.textContent = "Pick another class to deploy, or Begin Battle when ready.";
       }
     } else if (state.outcome) {
       elStatus.textContent = state.outcome === "win" ? "Victory." : "Defeated.";
     } else if (state.busy) {
       elStatus.textContent = "Resolving…";
-    } else if (state.phase === "enemy") {
-      elStatus.textContent = "Enemy phase — hold the line.";
-    } else if (state.awaitingAttack) {
+    } else if (cur && cur.kind === "enemy") {
+      elStatus.textContent = `${cur.name} takes its turn…`;
+    } else if (cur && state.awaitingAttack) {
       const n = state.attackTargets.size;
       elStatus.textContent = n > 0
-        ? "Click a highlighted enemy to attack, or Skip."
-        : "No enemies in range. Click Skip to end this unit's turn.";
-    } else if (sel) {
-      elStatus.textContent = `Click a highlighted tile to move ${sel.name}.`;
+        ? `${cur.name}: click a highlighted enemy to attack, or Skip Attack.`
+        : `${cur.name}: no enemies in range. Skip Attack to end the turn.`;
+    } else if (cur) {
+      elStatus.textContent = `${cur.name}: click a highlighted tile to move (your own tile = stay).`;
     } else {
-      elStatus.textContent = "Click one of your units to act.";
+      elStatus.textContent = "";
     }
   }
 
@@ -377,13 +483,39 @@
           <span class="deploy-class-meta">
             <strong>${c.name}</strong>
             <small>HP ${c.maxHp} · ⚔ ${c.atk} · 🛡 ${c.def}</small>
-            <small>Move ${c.moveRange} · Range ${c.attackRange}</small>
+            <small>Move ${c.moveRange} · Range ${c.attackRange} · Init +${INITIATIVE_MOD[id] ?? 0}</small>
           </span>
         </button>`;
     }).join("");
     for (const btn of elDeployClasses.querySelectorAll("button[data-class]")) {
       btn.addEventListener("click", () => selectDeployClass(btn.dataset.class));
     }
+  }
+
+  function renderInitiative() {
+    if (state.phase !== "battle" && state.phase !== "done") {
+      elInitiativeList.innerHTML = "";
+      return;
+    }
+    const items = state.initiativeOrder.map((id, idx) => {
+      const u = state.units.find((x) => x.id === id);
+      if (!u) return "";
+      const isCurrent = idx === state.currentTurnIndex && state.phase === "battle" && u.hp > 0;
+      const acted = u.hasActed && u.hp > 0;
+      const dead = u.hp <= 0;
+      const flags = [];
+      if (isCurrent) flags.push("current");
+      if (acted)    flags.push("acted");
+      if (dead)     flags.push("dead");
+      return `
+        <li class="init-row init-${u.kind} ${flags.join(" ")}">
+          <span class="init-marker">${isCurrent ? "▶" : ""}</span>
+          <span class="init-total">${u.initiative.total}</span>
+          <span class="init-name">${escapeHtml(u.name)}${u.isCommander ? " ★" : ""}</span>
+          <span class="init-hp">${Math.max(0, u.hp)}/${u.maxHp}</span>
+        </li>`;
+    }).join("");
+    elInitiativeList.innerHTML = items;
   }
 
   function renderRoster() {
@@ -395,7 +527,7 @@
         <li class="roster-row roster-${u.kind} roster-${status}">
           <span class="roster-sprite">${spriteSvg(u.sprite, { small: true })}</span>
           <span class="roster-meta">
-            <strong>${u.name}</strong>
+            <strong>${escapeHtml(u.name)}</strong>
             <small>⚔ ${u.atk} · 🛡 ${u.def} · Rng ${u.attackRange}${tag}</small>
           </span>
           <span class="roster-bar">
@@ -418,6 +550,7 @@
     renderSelection();
     renderHud();
     renderDeployPanel();
+    renderInitiative();
     renderRoster();
   }
 
@@ -432,12 +565,10 @@
     const clicked = unitAt(x, y);
 
     if (state.phase === "deploy") {
-      // Click a placed ally → remove it.
       if (clicked && clicked.kind === "ally" && !clicked.isCommander) {
         removeAlly(clicked.id);
         return;
       }
-      // Click a spawn tile with a class selected → place.
       if (state.selectedClass && isSpawnTile(x, y)) {
         placeAlly(state.selectedClass, x, y);
         return;
@@ -445,66 +576,38 @@
       return;
     }
 
-    if (state.phase !== "player") return;
+    if (state.phase !== "battle") return;
+    const cur = currentUnit();
+    if (!cur || cur.kind !== "ally") return;
 
-    // Awaiting attack: clicking a target commits attack; else cancel.
     if (state.awaitingAttack) {
       if (clicked && state.attackTargets.has(clicked.id)) {
-        doAttack(state.selectedId, clicked.id);
+        doAttack(cur.id, clicked.id);
       } else {
         skipAttack();
       }
       return;
     }
-    // Fresh ally → select.
-    if (clicked && clicked.kind === "ally" && !clicked.hasActed) {
-      selectUnit(clicked.id);
-      return;
-    }
-    // Reachable empty tile while selected → move.
-    if (state.selectedId && state.reachable.has(key(x, y))) {
-      const dest = unitAt(x, y);
-      if (dest) {
-        if (dest.kind === "ally" && !dest.hasActed && dest.id !== state.selectedId) {
-          selectUnit(dest.id);
-        }
-        return;
-      }
-      doMove(state.selectedId, x, y);
-      return;
-    }
-    clearSelection();
-  }
 
-  function selectUnit(id) {
-    const u = state.units.find((x) => x.id === id);
-    if (!u || u.hasActed) return;
-    state.selectedId = id;
-    state.reachable = reachableFrom(u, u.moveRange);
-    state.awaitingAttack = false;
-    state.attackTargets = new Set();
-    renderAll();
-  }
-
-  function clearSelection() {
-    state.selectedId = null;
-    state.reachable = new Map();
-    state.awaitingAttack = false;
-    state.attackTargets = new Set();
-    renderAll();
+    if (state.reachable.has(key(x, y))) {
+      if (clicked && clicked.id !== cur.id) return; // can't stop on someone else
+      doMove(cur.id, x, y);
+    }
   }
 
   async function doMove(unitId, x, y) {
     const u = state.units.find((x) => x.id === unitId);
     if (!u) return;
-    state.busy = true;
-    renderHud();
-    u.x = x; u.y = y;
-    positionUnit(u);
-    pushLog(`${u.name} marches to (${x}, ${y}).`, "move");
-    await sleep(240);
-    state.busy = false;
-
+    const dist = manhattan({ x: u.x, y: u.y }, { x, y });
+    if (dist > 0) {
+      state.busy = true;
+      renderHud();
+      u.x = x; u.y = y;
+      positionUnit(u);
+      pushLog(`${u.name} marches to (${x}, ${y}).`, "move");
+      await sleep(240);
+      state.busy = false;
+    }
     state.attackTargets = enemiesInRange(u);
     state.reachable = new Map();
     if (state.attackTargets.size > 0) {
@@ -512,14 +615,14 @@
       renderAll();
       return;
     }
-    finalizeAct(u);
+    await endCurrentTurn();
   }
 
   function skipAttack() {
-    const u = state.units.find((x) => x.id === state.selectedId);
+    const u = currentUnit();
     if (!u) return;
     pushLog(`${u.name} holds position.`, "");
-    finalizeAct(u);
+    void endCurrentTurn();
   }
 
   async function doAttack(attackerId, targetId) {
@@ -529,7 +632,9 @@
     state.busy = true;
     renderHud();
     await resolveAttack(attacker, target);
-    finalizeAct(attacker);
+    state.busy = false;
+    if (checkOutcome()) return;
+    await endCurrentTurn();
   }
 
   async function resolveAttack(attacker, target) {
@@ -546,59 +651,11 @@
     }
     renderUnits();
     renderRoster();
-    state.busy = false;
+    renderInitiative();
   }
 
-  function finalizeAct(u) {
-    u.hasActed = true;
-    state.selectedId = null;
-    state.reachable = new Map();
-    state.attackTargets = new Set();
-    state.awaitingAttack = false;
-    if (checkOutcome()) return;
-    renderAll();
-    if (livingAllies().every((a) => a.hasActed)) {
-      void endPlayerPhase();
-    }
-  }
-
-  function endTurnNow() {
-    if (state.phase !== "player" || state.busy || state.outcome) return;
-    for (const a of livingAllies()) a.hasActed = true;
-    clearSelection();
-    void endPlayerPhase();
-  }
-
-  // === Phase transitions ====================================================
-  async function endPlayerPhase() {
-    if (checkOutcome()) return;
-    state.phase = "enemy";
-    pushLog(`— Enemy phase begins —`, "phase");
-    renderHud();
-    await sleep(420);
-    await runEnemyPhase();
-    if (checkOutcome()) return;
-    startPlayerPhase();
-  }
-
-  function startPlayerPhase() {
-    state.turn += 1;
-    for (const u of state.units) u.hasActed = false;
-    state.phase = "player";
-    pushLog(`— Turn ${state.turn} —`, "phase");
-    renderAll();
-  }
-
-  async function runEnemyPhase() {
-    for (const e of livingEnemies()) {
-      if (state.outcome) return;
-      await enemyTakeTurn(e);
-    }
-  }
-
+  // === Enemy AI =============================================================
   function pickEnemyTarget(enemy) {
-    // Prefer the closest living ally. Tie-break: commander > others (commander
-    // is high-value, so finishing him is the win condition).
     const allies = livingAllies();
     if (allies.length === 0) return null;
     allies.sort((a, b) => {
@@ -616,9 +673,6 @@
     const target = pickEnemyTarget(enemy);
     if (!target) return;
     const reach = reachableFrom(enemy, enemy.moveRange);
-    // Score each reachable tile by "how far from being able to attack the
-    // target". 0 means we can attack from there; higher means we need to
-    // close more distance. Ties: prefer shorter movement.
     let best = { x: enemy.x, y: enemy.y, score: Math.max(0, manhattan(enemy, target) - enemy.attackRange), cost: 0 };
     for (const [k, cost] of reach) {
       const [x, y] = k.split(",").map(Number);
@@ -643,8 +697,8 @@
       state.busy = true;
       renderHud();
       await resolveAttack(enemy, target);
+      state.busy = false;
     }
-    enemy.hasActed = true;
   }
 
   // === Outcome ==============================================================
@@ -781,7 +835,6 @@
   <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
   <rect x="23" y="52" width="8" height="26" rx="3" fill="#7a8090" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
   <circle cx="45" cy="32" r="13" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
-  <!-- gold circlet so the commander reads as the leader -->
   <path d="M32 28 Q45 18 58 28" stroke="#ffd86b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
   <circle cx="50" cy="32" r="1.7" fill="#222"/>
   <g>
@@ -801,12 +854,10 @@
   <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
   <rect x="28" y="48" width="34" height="44" rx="6" fill="#8a3a2a" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
   <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
-  <!-- shield arm -->
   <rect x="20" y="54" width="11" height="22" rx="3" fill="#3a7aa0" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
   <circle cx="25.5" cy="64" r="2" fill="#ffd86b"/>
   <circle cx="45" cy="32" r="13" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
   <circle cx="50" cy="32" r="1.7" fill="#222"/>
-  <!-- axe arm -->
   <rect x="60" y="50" width="8" height="26" rx="3" fill="#8a3a2a"/>
   <rect x="63" y="30" width="3" height="34" fill="#5a3a1a"/>
   <path d="M58 28 L74 28 L70 38 L62 38 Z" fill="#c0c4cc" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
@@ -821,11 +872,9 @@
   <rect x="48" y="88" width="9" height="22" rx="3" fill="#2c2240"/>
   <rect x="28" y="48" width="34" height="44" rx="6" fill="#4a6a2a" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
   <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.35)"/>
-  <!-- hood -->
   <path d="M32 28 Q45 14 58 28 L58 38 L32 38 Z" fill="#2e4a18"/>
   <circle cx="45" cy="34" r="9" fill="#f4c592" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
   <circle cx="50" cy="34" r="1.5" fill="#222"/>
-  <!-- bow + drawn arrow -->
   <rect x="58" y="50" width="8" height="26" rx="3" fill="#4a6a2a"/>
   <path d="M70 28 Q86 56 70 84" stroke="#5a3a1a" stroke-width="3" fill="none"/>
   <line x1="70" y1="28" x2="70" y2="84" stroke="#dadada" stroke-width="1"/>
@@ -838,14 +887,11 @@
     return `
 <svg viewBox="0 0 90 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <ellipse cx="45" cy="115" rx="22" ry="3" fill="#000" opacity="0.35"/>
-  <!-- robe -->
   <path d="M20 110 L28 50 L62 50 L70 110 Z" fill="#3a4aaa" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>
   <rect x="28" y="78" width="34" height="5" fill="rgba(0,0,0,0.4)"/>
-  <!-- pointed hood -->
   <path d="M30 38 Q45 6 60 38 L58 42 L32 42 Z" fill="#2a3478" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
   <circle cx="45" cy="40" r="6.5" fill="#f4c592"/>
   <circle cx="48" cy="40" r="1.4" fill="#222"/>
-  <!-- staff -->
   <rect x="66" y="20" width="3" height="80" fill="#5a3a1a"/>
   <circle cx="67.5" cy="18" r="7" fill="#ff8af0" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
   <circle cx="65.5" cy="16" r="2" fill="#fff" opacity="0.6"/>
@@ -882,10 +928,8 @@
   <path d="M64 32 L72 28 L64 40 Z" fill="#8aaf50"/>
   <circle cx="44" cy="36" r="2" fill="#ff3333"/>
   <circle cx="56" cy="36" r="2" fill="#ff3333"/>
-  <!-- bow -->
   <path d="M16 30 Q4 56 16 82" stroke="#5a3a1a" stroke-width="3" fill="none"/>
   <line x1="16" y1="30" x2="16" y2="82" stroke="#dadada" stroke-width="1"/>
-  <!-- arrow nocked -->
   <rect x="14" y="55" width="20" height="2" fill="#dadada"/>
   <path d="M34 56 L30 52 L30 60 Z" fill="#c0c4cc"/>
 </svg>`;
@@ -911,8 +955,7 @@
   }
 
   window.addEventListener("resize", reposAllUnits);
-  elEndTurn.addEventListener("click", endTurnNow);
-  elSkipAttack.addEventListener("click", skipAttack);
+  elSkip.addEventListener("click", skipCurrentTurn);
   elOutcomeAgain.addEventListener("click", startNewBattle);
   elDeployStart.addEventListener("click", beginBattle);
 

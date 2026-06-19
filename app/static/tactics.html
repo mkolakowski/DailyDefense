@@ -43,24 +43,28 @@
 
   <aside class="tactics-sidebar">
     <section class="panel" id="deploy-panel">
-      <h3>Deploy Allies (<span id="deploy-remaining">3</span> slots)</h3>
+      <h3>Deploy Allies (<span id="deploy-remaining">2</span> slots)</h3>
       <div id="deploy-classes" class="deploy-classes"></div>
       <button type="button" id="deploy-start" class="action-btn primary" style="margin-top: 10px;">Begin Battle</button>
       <p class="muted" style="margin: 10px 0 0;">
-        Click a class then a cyan tile to place. Click a placed ally to
-        remove. Commander auto-deploys in the back row.
+        Tap a class then a cyan tile to place. Tap a placed ally to
+        remove. Commander auto-deploys at the back; squad caps at 3.
       </p>
     </section>
 
     <section class="panel hidden" id="battle-panel">
       <h3>Battle</h3>
-      <div class="battle-actions">
-        <button type="button" id="battle-end-turn" class="action-btn primary">End Turn</button>
-        <button type="button" id="battle-skip-attack" class="action-btn ghost hidden">Skip Attack</button>
-      </div>
+      <button type="button" id="battle-skip" class="action-btn primary">Skip Turn</button>
       <p class="muted" style="margin: 10px 0 0;">
-        Wipe the enemy army to win. If your commander falls, the skirmish is lost.
+        D&amp;D-style initiative — every unit rolls 1d20+mod at battle
+        start and acts in that order. Wipe the enemy army to win; if
+        your commander falls, the skirmish is lost.
       </p>
+    </section>
+
+    <section class="panel hidden" id="initiative-panel">
+      <h3>Initiative</h3>
+      <ol id="initiative-list" class="init-list"></ol>
     </section>
 
     <section class="panel hidden" id="roster-panel">

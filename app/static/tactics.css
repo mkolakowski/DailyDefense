@@ -76,10 +76,11 @@ a { color: var(--md-sys-color-primary); }
   background: var(--md-sys-color-surface-container-high);
   font-family: var(--md-sys-typescale-mono);
 }
-.phase-chip.phase-state[data-phase="deploy"] { color: var(--md-sys-color-secondary); }
-.phase-chip.phase-state[data-phase="player"] { color: var(--md-sys-color-primary); }
-.phase-chip.phase-state[data-phase="enemy"]  { color: var(--md-sys-color-error); }
-.phase-chip.phase-state[data-phase="done"]   { color: var(--md-sys-color-secondary); }
+.phase-chip.phase-state[data-phase="deploy"]  { color: var(--md-sys-color-secondary); }
+.phase-chip.phase-state[data-phase="ally"]    { color: var(--md-sys-color-primary); }
+.phase-chip.phase-state[data-phase="enemy"]   { color: var(--md-sys-color-error); }
+.phase-chip.phase-state[data-phase="battle"]  { color: var(--md-sys-color-on-surface-variant); }
+.phase-chip.phase-state[data-phase="done"]    { color: var(--md-sys-color-secondary); }
 
 /* Main grid ---------------------------------------------------------------- */
 .tactics-main {
@@ -127,8 +128,14 @@ a { color: var(--md-sys-color-primary); }
   width: var(--tile-size);
   height: var(--tile-size);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: filter 120ms ease, box-shadow 120ms ease;
 }
+/* Tap feedback: brighten on press so touch users see the hit register. */
+.tile:active.reachable    { filter: brightness(1.8) saturate(1.4); }
+.tile:active.attack-target { filter: brightness(1.5) saturate(1.4); }
+.tile:active.spawnable    { filter: brightness(1.7) saturate(1.4); }
 .tile.terrain-grass    { background: #2d5234; }
 .tile.terrain-forest   { background: #1d3a26; }
 .tile.terrain-mountain { background: #4d4036; cursor: not-allowed; }
@@ -230,6 +237,26 @@ a { color: var(--md-sys-color-primary); }
 .unit.dying { animation: tac-die 420ms ease-in forwards; }
 @keyframes tac-die {
   to { opacity: 0; transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.7) rotate(-12deg); }
+}
+.unit.active-turn .unit-sprite { animation: tac-bob 1.2s ease-in-out infinite; }
+.unit.enemy.active-turn .unit-sprite {
+  animation: tac-bob-mirror 1.2s ease-in-out infinite;
+}
+.unit.active-turn::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary), 0 0 18px var(--md-sys-color-primary);
+  animation: tac-active-pulse 1.6s ease-in-out infinite;
+}
+.unit.enemy.active-turn::after {
+  box-shadow: 0 0 0 2px var(--md-sys-color-error), 0 0 18px var(--md-sys-color-error);
+}
+@keyframes tac-active-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
 }
 .unit.selected .unit-sprite { animation: tac-bob 1.2s ease-in-out infinite; }
 @keyframes tac-bob {
@@ -372,6 +399,12 @@ a { color: var(--md-sys-color-primary); }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .action-btn:not(:disabled):hover { filter: brightness(1.08); }
 .action-btn:not(:disabled):active { filter: brightness(0.92); transform: translateY(1px); }
+.action-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* Deploy panel ------------------------------------------------------------- */
 .deploy-classes { display: flex; flex-direction: column; gap: 6px; }
@@ -395,6 +428,8 @@ a { color: var(--md-sys-color-primary); }
 .deploy-class:hover:not(:disabled) { filter: brightness(1.08); }
 .deploy-class:disabled { opacity: 0.45; cursor: not-allowed; }
 .deploy-class.selected { border-color: #5cf2c0; }
+.deploy-class { touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 60px; }
+.deploy-class:active:not(:disabled) { filter: brightness(0.92); transform: translateY(1px); }
 .deploy-class-sprite {
   width: 40px; height: 40px;
   display: flex; align-items: flex-end; justify-content: center;
@@ -406,6 +441,56 @@ a { color: var(--md-sys-color-primary); }
   color: var(--md-sys-color-on-surface-variant);
   font-size: 11px;
   font-family: var(--md-sys-typescale-mono);
+}
+
+/* Initiative track --------------------------------------------------------- */
+.init-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.init-row {
+  display: grid;
+  grid-template-columns: 18px 32px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--md-sys-color-surface-container-high);
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.init-row.init-ally .init-name  { color: var(--md-sys-color-primary); font-weight: 500; }
+.init-row.init-enemy .init-name { color: var(--md-sys-color-error);   font-weight: 500; }
+.init-row.current {
+  border-color: var(--md-sys-color-secondary);
+  background: var(--md-sys-color-surface-container-highest);
+}
+.init-row.acted { opacity: 0.55; }
+.init-row.dead  { opacity: 0.35; text-decoration: line-through; }
+.init-marker {
+  font-family: var(--md-sys-typescale-mono);
+  color: var(--md-sys-color-secondary);
+  text-align: center;
+  font-size: 11px;
+}
+.init-total {
+  font-family: var(--md-sys-typescale-mono);
+  font-weight: 700;
+  color: var(--md-sys-color-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+.init-hp {
+  font-family: var(--md-sys-typescale-mono);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 11px;
 }
 
 /* Roster ------------------------------------------------------------------- */

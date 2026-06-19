@@ -5,6 +5,69 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] — 2026-06-18
+
+### Added — D&D initiative + touch support ("Operation Roll for Initiative")
+- **D&D-style initiative.** When you press **Begin Battle**, every
+  unit on the field rolls **1d20 + modifier** and acts in descending
+  order — no more "all allies, then all enemies." Ties break ally over
+  enemy, then by creation order. Initiative modifiers:
+  | Sprite          | Init mod |
+  |-----------------|----------|
+  | Commander       | +2       |
+  | Warrior         | +1       |
+  | Archer          | +3       |
+  | Mage            | +0       |
+  | Goblin          | +1       |
+  | Goblin Archer   | +2       |
+  Every roll is dumped into the combat log so you can sanity-check
+  the order.
+- **Initiative-track sidebar panel.** Shows the round number plus the
+  full turn order, with the current unit's row highlighted gold, acted
+  units dimmed, and fallen units struck through. Ally rows are blue,
+  enemy rows red.
+- **Active-turn glow on the board.** The unit whose turn it is gets a
+  pulsing ring (primary blue for allies, error red for enemies) so the
+  board telegraphs whose action you're watching.
+- **Single context-sensitive Skip button** replaces the old End-Turn /
+  Skip-Attack pair. Label flips to "Skip Attack" once you've moved
+  into the attack-or-skip step.
+- **Squad of three.** Deploy budget cut from 3 to **2** — Commander +
+  2 allies = exactly three player-controlled characters. The deploy
+  panel now shows "2 slots" by default and each class button surfaces
+  its initiative modifier (`Init +N`).
+- **Five enemies** instead of three: 3 Goblins + 2 Goblin Archers
+  spread across the top half of the map so they pressure multiple
+  lanes instead of all bunching in one corner.
+
+### Added — Touch UX pass
+- `touch-action: manipulation` on every interactive element (tiles,
+  unit-class buttons, action buttons) — kills the 300ms tap delay on
+  iOS Safari.
+- `-webkit-tap-highlight-color: transparent` so taps no longer flash
+  the grey overlay over tiles or buttons.
+- `:active` filter feedback on every interactive tile state
+  (reachable / spawnable / attack-target) so touch users see their
+  taps register without a hover cue.
+- Deploy class buttons gained a `min-height: 60px` floor so tap
+  targets stay comfortably above the 44pt mobile minimum.
+- All button text marked `user-select: none` so a long-press doesn't
+  pop the selection magnifier.
+
+### Changed
+- **Turn loop restructured.** `phase` is now `deploy → battle → done`;
+  whose turn it is comes from `initiativeOrder[currentTurnIndex]`
+  instead of a side-based player/enemy phase. Each ally turn auto-
+  selects the active unit and shows its reachable tiles immediately —
+  no more "click unit to select."
+- **Click your own tile to stay put.** Skipping the move step is now
+  just tapping your current tile; the attack-or-skip step kicks in
+  afterwards if any enemy is in range.
+- **Each enemy turn runs in its initiative slot**, not as part of a
+  bulk enemy phase. Ranged enemies that roll high can shoot first;
+  the commander can land an opening blow if their roll wins.
+- HUD chip now reads `Round N · UnitName's turn`, coloured by side.
+
 ## [1.5.0] — 2026-06-18
 
 ### Added — Deploy phase + unit classes ("Operation Muster Roll")
