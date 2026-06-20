@@ -9,7 +9,14 @@
   // Legend: . grass · T forest · M mountain (impassable) · W water (impassable)
   const COLS = 10;
   const ROWS = 8;
-  const TERRAIN = { ".": "grass", "T": "forest", "M": "mountain", "W": "water" };
+  const TERRAIN = {
+    ".": "grass",
+    "T": "forest",
+    "H": "hill",
+    "R": "ruins",
+    "M": "mountain",
+    "W": "water",
+  };
   const IMPASSABLE_TERRAIN = new Set(["mountain", "water"]);
   // Re-export under the old name so the rest of the file keeps using it.
   const IMPASSABLE = IMPASSABLE_TERRAIN;
@@ -40,8 +47,10 @@
           const r = rng();
           if (r < 0.03) row += "M";       // mountain (3%)
           else if (r < 0.06) row += "W";  // water (3%)
-          else if (r < 0.22) row += "T";  // forest (16%)
-          else row += ".";                // grass (78%)
+          else if (r < 0.09) row += "H";  // hill (3%)
+          else if (r < 0.12) row += "R";  // ruins (3%)
+          else if (r < 0.28) row += "T";  // forest (16%)
+          else row += ".";                // grass (72%)
         }
         grid.push(row);
       }
@@ -897,23 +906,32 @@
 
   async function resolveAttack(attacker, target) {
     const ranged = manhattan(attacker, target) > 1;
-    // Forest cover: target standing in forest gets +1 to both physical and
-    // magical defense for incoming hits. Mountains/water can't be stood on,
-    // and grass is the baseline.
-    const onForest = terrainAt(target.x, target.y) === "forest";
-    const coverDef    = (target.def    || 0) + (onForest ? 1 : 0);
-    const coverSpDef  = (target.spDef  || 0) + (onForest ? 1 : 0);
+    // Terrain bonuses applied at strike time:
+    //   - Forest: target gets +1 Def and +1 SpDef (general cover).
+    //   - Ruins:  target gets +1 SpDef (specialised magic shield).
+    //   - Hill:   attacker gets +1 Str on melee swings (high ground).
+    const attackerTerrain = terrainAt(attacker.x, attacker.y);
+    const targetTerrain   = terrainAt(target.x, target.y);
+    const onHill   = attackerTerrain === "hill";
+    const onForest = targetTerrain   === "forest";
+    const onRuins  = targetTerrain   === "ruins";
+    const effStr   = (attacker.str   || 0) + (onHill   && !ranged ? 1 : 0);
+    const effDef   = (target.def     || 0) + (onForest ? 1 : 0);
+    const effSpDef = (target.spDef   || 0) + (onForest ? 1 : 0) + (onRuins ? 1 : 0);
     let dmg = ranged
-      ? Math.max(1, attacker.spAtk - coverSpDef)
-      : Math.max(1, attacker.str   - coverDef);
+      ? Math.max(1, attacker.spAtk - effSpDef)
+      : Math.max(1, effStr         - effDef);
     if (testModeOn) {
       if (testFlags.godMode && target.kind === "ally") dmg = 0;
       if (testFlags.oneShot && attacker.kind === "ally") dmg = target.maxHp;
     }
     target.hp = Math.max(0, target.hp - dmg);
     const verb = ranged ? "shoots" : "hits";
-    const coverTag = onForest ? " (forest cover)" : "";
-    pushLog(`${attacker.name} ${verb} ${target.name}${coverTag} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
+    const coverTag = onForest ? " (forest cover)"
+                   : onRuins  ? " (ruins cover)"
+                   : "";
+    const highGround = (onHill && !ranged) ? "Atop the hill, " : "";
+    pushLog(`${highGround}${attacker.name} ${verb} ${target.name}${coverTag} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
     if (ranged) {
       animateRangedShot(attacker, target);
       await sleep(300);

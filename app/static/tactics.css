@@ -189,6 +189,8 @@ a { color: var(--md-sys-color-primary); }
 .tile:active.spawnable    { filter: brightness(1.7) saturate(1.4); }
 .tile.terrain-grass    { background: #2d5234; }
 .tile.terrain-forest   { background: #1d3a26; }
+.tile.terrain-hill     { background: #6a5230; }
+.tile.terrain-ruins    { background: #45424f; }
 .tile.terrain-mountain { background: #4d4036; cursor: not-allowed; }
 .tile.terrain-water    { background: #1d3656; cursor: not-allowed; }
 
@@ -216,6 +218,28 @@ a { color: var(--md-sys-color-primary); }
   border-top: 2px solid rgba(180, 220, 255, 0.35);
   border-radius: 50%;
   opacity: 0.7;
+}
+.tile.terrain-hill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 78%, rgba(210, 165, 110, 0.55) 0 16px, transparent 22px);
+}
+.tile.terrain-ruins::after {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px;
+  top: 18px; bottom: 12px;
+  background:
+    linear-gradient(to right,
+      rgba(180, 180, 200, 0.7) 0 5px,
+      transparent 5px 12px,
+      rgba(180, 180, 200, 0.7) 12px 22px,
+      transparent 22px 28px,
+      rgba(180, 180, 200, 0.7) 28px 32px);
+  border-bottom: 2px solid rgba(180, 180, 200, 0.55);
+  opacity: 0.85;
 }
 
 .tile.reachable {
@@ -459,6 +483,8 @@ a { color: var(--md-sys-color-primary); }
 }
 .legend-swatch.terrain-grass    { background: #2d5234; }
 .legend-swatch.terrain-forest   { background: #1d3a26; }
+.legend-swatch.terrain-hill     { background: #6a5230; }
+.legend-swatch.terrain-ruins    { background: #45424f; }
 .legend-swatch.terrain-mountain { background: #4d4036; }
 .legend-swatch.terrain-water    { background: #1d3656; }
 

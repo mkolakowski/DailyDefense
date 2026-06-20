@@ -5,6 +5,47 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] — 2026-06-19
+
+### Added — Two new cover terrains ("Operation Higher Ground")
+- **Hill** (`H` in the map grid). Passable, brown tile with a domed
+  mound underlay. A unit standing on a hill gets **+1 Strength on
+  melee swings** (high-ground bonus). Ranged shots from a hill are
+  unaffected — the dial is melee-only so it complements ruins
+  rather than overlapping with cover.
+- **Ruins** (`R` in the map grid). Passable, slate-gray tile with
+  broken-stone fragments. A unit standing in ruins gets **+1
+  Special Defense** for incoming attacks (magic wards still humming
+  in the old stones).
+- Procgen terrain distribution updated:
+  | Terrain  | Glyph | Prob. |
+  |----------|-------|-------|
+  | Grass    | `.`   | ~72%  |
+  | Forest   | `T`   | ~16%  |
+  | Hill     | `H`   |  ~3%  |
+  | Ruins    | `R`   |  ~3%  |
+  | Mountain | `M`   |  ~3%  |
+  | Water    | `W`   |  ~3%  |
+
+### Changed
+- `resolveAttack` damage now consults both attacker and target tile
+  terrains. Effective Str = Str + (on hill && melee ? 1 : 0).
+  Effective Def = Def + (target on forest ? 1 : 0). Effective SpDef
+  = SpDef + (forest ? 1 : 0) + (ruins ? 1 : 0).
+- Combat log surfaces every active bonus:
+  - `Atop the hill, Warrior hits Goblin for 4.`
+  - `Goblin shoots Mage (ruins cover) for 1.`
+  - `Goblin hits Warrior (forest cover) for 1.` (unchanged)
+- Board legend now lists all six terrain types with their bonuses
+  inline.
+
+### Tactical math
+- Warrior (Str 10) on hill swinging at Goblin (Def 1) → 10 dmg
+  instead of 9.
+- Mage (SpDef 4) in ruins taking Goblin Archer shot (SpA 7) → 2 dmg
+  instead of 3. In ruins **AND** forest doesn't stack (only one
+  tile at a time), so each tile has a clear role.
+
 ## [1.22.0] — 2026-06-19
 
 ### Added — Map re-roll during deploy ("Operation Mulligan")
