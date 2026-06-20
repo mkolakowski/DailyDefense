@@ -32,7 +32,12 @@
   <section class="board-card">
     <div class="status-line muted" id="tactics-status">Pick a class to deploy.</div>
     <div class="board-wrap">
-      <div class="tactics-board" id="tactics-board" aria-label="Battlefield"></div>
+      <div class="board-frame" id="board-frame">
+        <div class="board-corner"></div>
+        <div class="board-col-labels" id="board-col-labels"></div>
+        <div class="board-row-labels" id="board-row-labels"></div>
+        <div class="tactics-board" id="tactics-board" aria-label="Battlefield"></div>
+      </div>
     </div>
     <div class="board-legend muted">
       <span><span class="legend-swatch terrain-grass"></span> Grass</span>

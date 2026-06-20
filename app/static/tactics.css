@@ -112,6 +112,55 @@ a { color: var(--md-sys-color-primary); }
   justify-content: center;
 }
 
+/* Board frame (chess-style chrome around the grid) ------------------------- */
+.board-frame {
+  display: inline-grid;
+  grid-template-columns: 22px auto;
+  grid-template-rows: 22px auto;
+  gap: 4px;
+  padding: 10px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.board-corner { grid-column: 1; grid-row: 1; }
+.board-col-labels {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(10, var(--tile-size));
+  gap: 2px;
+  padding: 0 2px;
+}
+.board-col-labels span {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--md-sys-typescale-mono);
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 22px;
+  letter-spacing: 0.04em;
+}
+.board-row-labels {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(8, var(--tile-size));
+  gap: 2px;
+  padding: 2px 0;
+}
+.board-row-labels span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--md-sys-typescale-mono);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 /* Grid --------------------------------------------------------------------- */
 .tactics-board {
   position: relative;
@@ -122,6 +171,8 @@ a { color: var(--md-sys-color-primary); }
   background: var(--md-sys-color-outline-variant);
   border-radius: 8px;
   user-select: none;
+  grid-column: 2;
+  grid-row: 2;
 }
 .tile {
   position: relative;

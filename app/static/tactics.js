@@ -188,6 +188,8 @@
 
   // === Map / unit helpers ===================================================
   const key = (x, y) => `${x},${y}`;
+  // Chess-style label: x=0→A, x=1→B, ...; y=0→1, y=1→2, ... (top-down).
+  const tileLabel = (x, y) => `${String.fromCharCode(65 + x)}${y + 1}`;
   const terrainAt = (x, y) => TERRAIN[MAP[y][x]] || "grass";
   const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
   const passableTerrain = (x, y) => inBounds(x, y) && !IMPASSABLE.has(terrainAt(x, y));
@@ -266,7 +268,7 @@
     if (remainingDeploy() <= 0) return;
     if (!isSpawnTile(x, y)) return;
     state.units.push(makeUnit(tmpl, "ally", x, y));
-    pushLog(`${tmpl.name} deployed at (${x}, ${y}).`, "phase");
+    pushLog(`${tmpl.name} deployed at ${tileLabel(x, y)}.`, "phase");
     if (remainingDeploy() <= 0) state.selectedClass = null;
     renderAll();
   }
@@ -358,6 +360,31 @@
   // === Rendering ============================================================
   function buildBoard() {
     elBoard.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
+    // Column labels (A, B, C, …) above the board.
+    const colLabels = $("board-col-labels");
+    if (colLabels) {
+      colLabels.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
+      const frag = document.createDocumentFragment();
+      for (let x = 0; x < COLS; x++) {
+        const span = document.createElement("span");
+        span.textContent = String.fromCharCode(65 + x);
+        frag.appendChild(span);
+      }
+      colLabels.appendChild(frag);
+    }
+    // Row labels (1, 2, 3, …) along the left side.
+    const rowLabels = $("board-row-labels");
+    if (rowLabels) {
+      rowLabels.style.gridTemplateRows = `repeat(${ROWS}, var(--tile-size))`;
+      const frag = document.createDocumentFragment();
+      for (let y = 0; y < ROWS; y++) {
+        const span = document.createElement("span");
+        span.textContent = String(y + 1);
+        frag.appendChild(span);
+      }
+      rowLabels.appendChild(frag);
+    }
+    // Tiles.
     const frag = document.createDocumentFragment();
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
@@ -367,7 +394,7 @@
         tile.dataset.y = String(y);
         const coords = document.createElement("span");
         coords.className = "tile-coords";
-        coords.textContent = `${x},${y}`;
+        coords.textContent = tileLabel(x, y);
         tile.appendChild(coords);
         tile.addEventListener("click", () => onTileClick(x, y));
         frag.appendChild(tile);
@@ -724,7 +751,7 @@
       renderHud();
       u.x = mx; u.y = my;
       positionUnit(u);
-      pushLog(`${u.name} closes on the target — (${mx}, ${my}).`, "move");
+      pushLog(`${u.name} closes on the target — ${tileLabel(mx, my)}.`, "move");
       await sleep(240);
       state.busy = false;
     }
@@ -741,7 +768,7 @@
       renderHud();
       u.x = x; u.y = y;
       positionUnit(u);
-      pushLog(`${u.name} marches to (${x}, ${y}).`, "move");
+      pushLog(`${u.name} marches to ${tileLabel(x, y)}.`, "move");
       await sleep(240);
       state.busy = false;
     }
@@ -862,7 +889,7 @@
       renderHud();
       enemy.x = best.x; enemy.y = best.y;
       positionUnit(enemy);
-      pushLog(`${enemy.name} advances to (${best.x}, ${best.y}).`, "");
+      pushLog(`${enemy.name} advances to ${tileLabel(best.x, best.y)}.`, "");
       await sleep(280);
       state.busy = false;
     }

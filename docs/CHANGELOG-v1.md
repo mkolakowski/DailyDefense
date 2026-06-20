@@ -5,6 +5,31 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] — 2026-06-19
+
+### Added — Bordered board with grid references ("Operation Grid Reference")
+- **Board now sits inside a framed container** with a thicker outline,
+  rounded corners, and an inset shadow — chess-board chrome around the
+  battlefield instead of a bare grid.
+- **Column letters A–J** above the board; **row numbers 1–8** down the
+  left side. Both rendered as monospace bold so they read at a glance.
+- **All movement logs use the new notation.** `Warrior marches to D8`
+  replaces `Warrior marches to (3, 7)`; ally / enemy advance logs and
+  the auto-path "closes on target" line follow the same format.
+- **Test-mode tile-coords overlay** uses the same letter-number scheme
+  (`A1`, `J8`, etc.) so the in-tile labels match the board headers.
+
+### Note
+- BFS pass-through behavior is unchanged: both allies *and* enemies can
+  path through same-kind units (introduced in v1.15). The end-of-move
+  tile still has to be empty. If the visual behavior seems asymmetric
+  between sides, default-loadout positioning (Warrior/Archer/Mage 3
+  tiles apart on row 8 with `moveRange` 2–3) often means allies don't
+  *need* pass-through to find a route, so the mechanic rarely fires
+  visibly for the player even though enemies use it routinely from
+  their tighter cluster. Worth re-testing now that the labels make
+  movement paths easier to trace.
+
 ## [1.17.0] — 2026-06-19
 
 ### Added — Speed-first combat exchanges ("Operation First Blood")
