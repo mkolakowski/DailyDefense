@@ -2,24 +2,87 @@
   "use strict";
 
   // === Map ==================================================================
-  // Hand-built 10x8 battlefield. Procedural generation lands in a later
-  // release; for now this gives terrain variety + a couple of choke points.
+  // 10x8 battlefield, randomly generated each skirmish. Spawn rows + enemy
+  // spawn tiles are forced passable; a BFS connectivity check makes sure
+  // every enemy is reachable from the back row before we keep the map.
   //
   // Legend: . grass · T forest · M mountain (impassable) · W water (impassable)
-  const MAP = [
-    "..T.......",
-    ".....M....",
-    "...T....T.",
-    "..M...WW..",
-    ".....WWW..",
-    "..T.......",
-    "....T..M..",
-    "..........",
-  ];
-  const COLS = MAP[0].length;
-  const ROWS = MAP.length;
+  const COLS = 10;
+  const ROWS = 8;
   const TERRAIN = { ".": "grass", "T": "forest", "M": "mountain", "W": "water" };
-  const IMPASSABLE = new Set(["mountain", "water"]);
+  const IMPASSABLE_TERRAIN = new Set(["mountain", "water"]);
+  // Re-export under the old name so the rest of the file keeps using it.
+  const IMPASSABLE = IMPASSABLE_TERRAIN;
+
+  // These tiles must be passable in every generated map: the bottom 2 ally
+  // spawn rows and the hard-coded enemy spawn positions.
+  function isForcedPassable(x, y) {
+    if (y >= 6) return true;
+    return ENEMY_STARTS.some((p) => p.x === x && p.y === y);
+  }
+
+  function makeMap() {
+    // Lightweight mulberry32 PRNG seeded with crypto-ish randomness.
+    let s = (Math.random() * 0xFFFFFFFF) >>> 0;
+    const rng = () => {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    function attempt() {
+      const grid = [];
+      for (let y = 0; y < ROWS; y++) {
+        let row = "";
+        for (let x = 0; x < COLS; x++) {
+          if (isForcedPassable(x, y)) { row += "."; continue; }
+          const r = rng();
+          if (r < 0.03) row += "M";       // mountain (3%)
+          else if (r < 0.06) row += "W";  // water (3%)
+          else if (r < 0.22) row += "T";  // forest (16%)
+          else row += ".";                // grass (78%)
+        }
+        grid.push(row);
+      }
+      return grid;
+    }
+    function isPlayable(grid) {
+      const seenKeys = new Set();
+      const start = `${ENEMY_STARTS[0].x},${ENEMY_STARTS[0].y}`;
+      const queue = [[ENEMY_STARTS[0].x, ENEMY_STARTS[0].y]];
+      seenKeys.add(start);
+      while (queue.length) {
+        const [cx, cy] = queue.shift();
+        for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+          const ch = grid[ny][nx];
+          if (IMPASSABLE_TERRAIN.has(TERRAIN[ch] || "grass")) continue;
+          const k = `${nx},${ny}`;
+          if (seenKeys.has(k)) continue;
+          seenKeys.add(k);
+          queue.push([nx, ny]);
+        }
+      }
+      // Every enemy spawn + back-row spawn tile must be in the same component.
+      for (const p of ENEMY_STARTS) {
+        if (!seenKeys.has(`${p.x},${p.y}`)) return false;
+      }
+      for (let x = 0; x < COLS; x++) {
+        if (!seenKeys.has(`${x},${ROWS - 1}`)) return false;
+      }
+      return true;
+    }
+    for (let i = 0; i < 30; i++) {
+      const g = attempt();
+      if (isPlayable(g)) return g;
+    }
+    return attempt(); // give up — at least something passable for spawns
+  }
+
+  // Mutable because we regenerate it on every Skirmish-again.
+  let MAP;
 
   // === Unit templates =======================================================
   // Pokemon-style 7-stat block per unit. Melee damage = Str - Def;
@@ -359,10 +422,11 @@
 
   // === Rendering ============================================================
   function buildBoard() {
+    elBoard.innerHTML = "";
     elBoard.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
     // Column labels (A, B, C, …) above the board.
     const colLabels = $("board-col-labels");
-    if (colLabels) {
+    if (colLabels && colLabels.children.length === 0) {
       colLabels.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
       const frag = document.createDocumentFragment();
       for (let x = 0; x < COLS; x++) {
@@ -374,7 +438,7 @@
     }
     // Row labels (1, 2, 3, …) along the left side.
     const rowLabels = $("board-row-labels");
-    if (rowLabels) {
+    if (rowLabels && rowLabels.children.length === 0) {
       rowLabels.style.gridTemplateRows = `repeat(${ROWS}, var(--tile-size))`;
       const frag = document.createDocumentFragment();
       for (let y = 0; y < ROWS; y++) {
@@ -1218,10 +1282,11 @@
   function reposAllUnits() { for (const u of state.units) positionUnit(u); }
 
   function startNewBattle() {
+    MAP = makeMap();
     state = freshBattle();
     log = [];
-    for (const node of elBoard.querySelectorAll(".unit")) node.remove();
-    pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");
+    buildBoard();
+    pushLog("Fresh battlefield. Pick classes and hit Begin Battle.", "phase");
     renderAll();
     hideOutcomeModal();
   }
@@ -1231,6 +1296,7 @@
   elOutcomeAgain.addEventListener("click", startNewBattle);
   elDeployStart.addEventListener("click", beginBattle);
 
+  MAP = makeMap();
   buildBoard();
   wireTestPanel();
   pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");

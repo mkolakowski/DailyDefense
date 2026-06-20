@@ -5,6 +5,39 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] — 2026-06-19
+
+### Added — Procedural maps ("Operation Cartographer")
+- **Every skirmish now spawns on a randomly generated battlefield.**
+  The hand-built 10x8 map is gone; in its place is a `makeMap()`
+  generator that seeds a `mulberry32` PRNG from `Math.random()` and
+  rolls each tile against weighted probabilities:
+  | Terrain  | Glyph | Probability |
+  |----------|-------|-------------|
+  | Grass    | `.`   | ~78%        |
+  | Forest   | `T`   | ~16%        |
+  | Mountain | `M`   |  ~3%        |
+  | Water    | `W`   |  ~3%        |
+- **Safety constraints baked in.**
+  - All of row 7 + 8 (the ally spawn zone) is force-passable.
+  - Every hard-coded enemy spawn tile (H1, J1, I3, I5) is
+    force-passable.
+  - Generation retries up to 30 times if a BFS connectivity check
+    from the first enemy fails to reach every other enemy spawn
+    and every back-row tile. So you'll never get a map that locks
+    half the field behind a mountain wall.
+- **Map regenerates on "Skirmish again"** so every battle truly is a
+  fresh field. The page-load map is also random; refresh for a re-roll.
+- `buildBoard()` is now idempotent — labels reuse the existing DOM,
+  tiles get wiped and re-drawn from the new MAP.
+
+### Up next
+- v1.21 "Operation Biome Lab" — biome themes (forest / cave /
+  volcano colour palettes) so each map has a *flavor* on top of its
+  random layout.
+- v1.22 onward — terrain cover bonuses (forests give +Def,
+  mountain edges give +SpDef, etc.).
+
 ## [1.19.0] — 2026-06-19
 
 ### Changed — Warrior + Mage swap flanks ("Operation Flank Swap")

@@ -70,9 +70,14 @@ Running list of work items for DailyDefense. Move items into the changelog
         the left; all movement logs use the new "D8" notation.
   - [x] v1.19.0 "Operation Flank Swap" — Warrior moves to right
         flank (I8), Mage to left (C8); Archer stays at F8.
-  - [ ] v1.20.0 "Operation Cartographer" — procedural map generation
-        with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.21.0 "Operation War Drum" — animations + AI improvements.
+  - [x] v1.20.0 "Operation Cartographer" — procedural map generator
+        (mulberry32 + weighted terrain rolls + connectivity retry;
+        regen on Skirmish-again).
+  - [ ] v1.21.0 "Operation Biome Lab" — biome themes (forest / cave /
+        volcano colour palettes) on top of the random layout.
+  - [ ] v1.22.0 — terrain cover bonuses (forest +Def, mountain edges
+        +SpDef, etc.).
+  - [ ] v1.23.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 
