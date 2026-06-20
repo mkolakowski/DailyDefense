@@ -888,17 +888,23 @@
 
   async function resolveAttack(attacker, target) {
     const ranged = manhattan(attacker, target) > 1;
-    // Melee = Strength vs Defense; ranged/magic = SpAtk vs SpDef.
+    // Forest cover: target standing in forest gets +1 to both physical and
+    // magical defense for incoming hits. Mountains/water can't be stood on,
+    // and grass is the baseline.
+    const onForest = terrainAt(target.x, target.y) === "forest";
+    const coverDef    = (target.def    || 0) + (onForest ? 1 : 0);
+    const coverSpDef  = (target.spDef  || 0) + (onForest ? 1 : 0);
     let dmg = ranged
-      ? Math.max(1, attacker.spAtk - target.spDef)
-      : Math.max(1, attacker.str   - target.def);
+      ? Math.max(1, attacker.spAtk - coverSpDef)
+      : Math.max(1, attacker.str   - coverDef);
     if (testModeOn) {
       if (testFlags.godMode && target.kind === "ally") dmg = 0;
       if (testFlags.oneShot && attacker.kind === "ally") dmg = target.maxHp;
     }
     target.hp = Math.max(0, target.hp - dmg);
     const verb = ranged ? "shoots" : "hits";
-    pushLog(`${attacker.name} ${verb} ${target.name} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
+    const coverTag = onForest ? " (forest cover)" : "";
+    pushLog(`${attacker.name} ${verb} ${target.name}${coverTag} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
     if (ranged) {
       animateRangedShot(attacker, target);
       await sleep(300);

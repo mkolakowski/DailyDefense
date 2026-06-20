@@ -5,6 +5,30 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] — 2026-06-19
+
+### Added — Forest cover bonus ("Operation Take Cover")
+- **Units standing on a forest tile gain +1 Defense and +1 Special
+  Defense** for incoming attacks. Physical Strength-Def calculations
+  and ranged SpAtk-SpDef calculations both subtract the boosted
+  number.
+  - Warrior (Def 4) in forest → effective Def 5; goblin melee
+    Str 6 - 5 = 1 dmg instead of 2.
+  - Mage (SpDef 4) in forest → effective SpDef 5; Goblin Archer's
+    SpAtk 7 - 5 = 2 dmg instead of 3.
+- **Combat log calls cover out explicitly.** When the bonus applies
+  the line reads `Goblin hits Warrior (forest cover) for 1.` so you
+  can see why a hit dropped from the usual number.
+- Forest tiles are already visibly darker green with the leafy
+  pattern, so the cover indicator is built into the existing
+  terrain art — no extra UI.
+
+### Notes
+- Mountains and water are still impassable, so cover stays a
+  forest-only mechanic for now. Future versions could introduce
+  passable "ruins" or "stone" terrain with bonus on the special
+  side, or a "hill" terrain with +Atk for occupants.
+
 ## [1.20.0] — 2026-06-19
 
 ### Added — Procedural maps ("Operation Cartographer")

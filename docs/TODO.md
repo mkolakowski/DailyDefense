@@ -73,10 +73,11 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.20.0 "Operation Cartographer" — procedural map generator
         (mulberry32 + weighted terrain rolls + connectivity retry;
         regen on Skirmish-again).
-  - [ ] v1.21.0 "Operation Biome Lab" — biome themes (forest / cave /
+  - [x] v1.21.0 "Operation Take Cover" — forest tiles grant +1 Def
+        and +1 SpDef to their occupant; combat log calls out
+        "(forest cover)" when the bonus applies.
+  - [ ] v1.22.0 "Operation Biome Lab" — biome themes (forest / cave /
         volcano colour palettes) on top of the random layout.
-  - [ ] v1.22.0 — terrain cover bonuses (forest +Def, mountain edges
-        +SpDef, etc.).
   - [ ] v1.23.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
