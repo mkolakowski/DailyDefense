@@ -5,6 +5,43 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.27.0] — 2026-06-20
+
+### Changed — Portrait map + randomized opposing-side placement ("Operation Tall Order")
+- **Map dimensions flipped to 7×12** (was 10×8). Skinnier + taller so
+  the battlefield fits better on a portrait phone screen, and the
+  vertical-confrontation framing (your party at the south border vs
+  goblins at the north border) reads more naturally as "two armies
+  closing across no-man's land."
+- **Unit positions are now randomized per map**, sharing the same
+  PRNG seed as the terrain. The bands are guaranteed-opposing:
+  - **Player party (Warrior + Archer + Mage)** rolls into the bottom
+    two rows (rows 11 + 10 — the southern border).
+  - **Enemy force (3 Goblins + 1 Goblin Archer)** rolls into the top
+    two rows (rows 0 + 1 — the northern border).
+  - Order within the band is shuffled too, so the Mage is sometimes
+    on the left flank, sometimes the right, etc.
+- **Forced-passable bands** cover both spawn zones (rows 0-1 and
+  10-11). Procgen terrain only rolls for the eight middle rows
+  (rows 2-9), so the spawn picks are always on plain grass.
+- **Connectivity retry** now checks both: BFS from the first enemy
+  must reach every other enemy *and* every rolled ally position.
+- **Daily seed locks both map and positions**: anyone playing
+  today's `Daily 2026-06-20` field gets identical terrain AND
+  identical unit placements, so par-turn / win-rate comparisons are
+  apples-to-apples.
+
+### Notes
+- `ALLY_COMP` + `ENEMY_COMP` define the rosters in one place;
+  `makeMap()` rolls positions and packs them into the returned
+  `allyLoadout` / `enemyStarts` arrays.
+- New `applyMapData(seedOverride, isDaily)` helper does the
+  module-state update so callers don't have to remember to bump
+  `DEFAULT_ALLY_LOADOUT` and `ENEMY_STARTS` by hand.
+- Total tile count is similar (7×12 = 84 vs 10×8 = 80), so battle
+  pacing should feel comparable — units just close along the
+  vertical axis instead of the horizontal.
+
 ## [1.26.0] — 2026-06-20
 
 ### Added — Daily-seed maps ("Operation Sunrise Field")

@@ -7,8 +7,8 @@
   // every enemy is reachable from the back row before we keep the map.
   //
   // Legend: . grass · T forest · M mountain (impassable) · W water (impassable)
-  const COLS = 10;
-  const ROWS = 8;
+  const COLS = 7;
+  const ROWS = 12;
   const TERRAIN = {
     ".": "grass",
     "T": "forest",
@@ -21,11 +21,11 @@
   // Re-export under the old name so the rest of the file keeps using it.
   const IMPASSABLE = IMPASSABLE_TERRAIN;
 
-  // These tiles must be passable in every generated map: the bottom 2 ally
-  // spawn rows and the hard-coded enemy spawn positions.
+  // These tiles must be passable in every generated map: both the top
+  // enemy-spawn band and the bottom ally-spawn band, so a random pick
+  // anywhere inside them is always valid.
   function isForcedPassable(x, y) {
-    if (y >= 6) return true;
-    return ENEMY_STARTS.some((p) => p.x === x && p.y === y);
+    return ENEMY_SPAWN_ROWS.has(y) || SPAWN_ROWS.has(y);
   }
 
   // Today's date as a stable YYYYMMDD integer — same value all day for any
@@ -43,7 +43,9 @@
     return `${d.getFullYear()}-${mm}-${dd}`;
   }
   // `seedOverride` is optional: pass a number for a deterministic field,
-  // leave it undefined for a fresh random one.
+  // leave it undefined for a fresh random one. Returns the grid + the
+  // randomly-rolled ally and enemy starting positions (so daily seed locks
+  // map AND positions identically for every player on the same date).
   function makeMap(seedOverride) {
     // Lightweight mulberry32 PRNG. Seed from arg or Math.random().
     let s = ((seedOverride ?? Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0) || 1;
@@ -54,7 +56,17 @@
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-    function attempt() {
+    function pickPositions(rowSet, count) {
+      const all = [];
+      for (const y of rowSet) for (let x = 0; x < COLS; x++) all.push({ x, y });
+      // Fisher-Yates shuffle drawing from the same rng so daily seed is stable.
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+      return all.slice(0, count);
+    }
+    function attemptGrid() {
       const grid = [];
       for (let y = 0; y < ROWS; y++) {
         let row = "";
@@ -72,11 +84,11 @@
       }
       return grid;
     }
-    function isPlayable(grid) {
+    function isPlayable(grid, allyPos, enemyPos) {
       const seenKeys = new Set();
-      const start = `${ENEMY_STARTS[0].x},${ENEMY_STARTS[0].y}`;
-      const queue = [[ENEMY_STARTS[0].x, ENEMY_STARTS[0].y]];
-      seenKeys.add(start);
+      const start = enemyPos[0];
+      const queue = [[start.x, start.y]];
+      seenKeys.add(`${start.x},${start.y}`);
       while (queue.length) {
         const [cx, cy] = queue.shift();
         for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
@@ -90,20 +102,39 @@
           queue.push([nx, ny]);
         }
       }
-      // Every enemy spawn + back-row spawn tile must be in the same component.
-      for (const p of ENEMY_STARTS) {
-        if (!seenKeys.has(`${p.x},${p.y}`)) return false;
-      }
-      for (let x = 0; x < COLS; x++) {
-        if (!seenKeys.has(`${x},${ROWS - 1}`)) return false;
-      }
+      for (const p of enemyPos) if (!seenKeys.has(`${p.x},${p.y}`)) return false;
+      for (const p of allyPos)  if (!seenKeys.has(`${p.x},${p.y}`)) return false;
       return true;
     }
     for (let i = 0; i < 30; i++) {
-      const g = attempt();
-      if (isPlayable(g)) return g;
+      const allyPos  = pickPositions([...SPAWN_ROWS],       ALLY_COMP.length);
+      const enemyPos = pickPositions([...ENEMY_SPAWN_ROWS], ENEMY_COMP.length);
+      const g = attemptGrid();
+      if (isPlayable(g, allyPos, enemyPos)) {
+        return {
+          grid: g,
+          allyLoadout: ALLY_COMP.map((c, i) => ({ ...c, x: allyPos[i].x, y: allyPos[i].y })),
+          enemyStarts: ENEMY_COMP.map((e, i) => ({ ...e, x: enemyPos[i].x, y: enemyPos[i].y })),
+        };
+      }
     }
-    return attempt(); // give up — at least something passable for spawns
+    // Fallback: random positions, no playability guarantee
+    const allyPos  = pickPositions([...SPAWN_ROWS],       ALLY_COMP.length);
+    const enemyPos = pickPositions([...ENEMY_SPAWN_ROWS], ENEMY_COMP.length);
+    return {
+      grid: attemptGrid(),
+      allyLoadout: ALLY_COMP.map((c, i) => ({ ...c, x: allyPos[i].x, y: allyPos[i].y })),
+      enemyStarts: ENEMY_COMP.map((e, i) => ({ ...e, x: enemyPos[i].x, y: enemyPos[i].y })),
+    };
+  }
+
+  // Apply a fresh map (and the positions baked into it) to module state.
+  function applyMapData(seedOverride, isDaily) {
+    const r = makeMap(seedOverride);
+    MAP = r.grid;
+    DEFAULT_ALLY_LOADOUT = r.allyLoadout;
+    ENEMY_STARTS = r.enemyStarts;
+    onDailyMap = !!isDaily;
   }
 
   // Mutable because we regenerate it on every Skirmish-again.
@@ -140,21 +171,27 @@
       stats: { hp: 14, spd: 10, str: 4, atk: 3, def: 0, spAtk: 7, spDef: 1 },
     },
   };
-  // Default loadout: one of every class. Warrior pushed forward so the melee
-  // fighter closes faster; Archer + Mage sit on the back row to shoot.
-  const DEFAULT_ALLY_LOADOUT = [
-    { classId: "mage",    x: 2, y: 7 },
-    { classId: "archer",  x: 5, y: 7 },
-    { classId: "warrior", x: 8, y: 7 },
+  // Roster composition. Positions are rolled per map in makeMap().
+  const ALLY_COMP = [
+    { classId: "warrior" },
+    { classId: "archer"  },
+    { classId: "mage"    },
   ];
-  const ENEMY_STARTS = [
-    { type: "goblin",       x: 7, y: 0 },
-    { type: "goblinArcher", x: 9, y: 0 },
-    { type: "goblin",       x: 8, y: 2 },
-    { type: "goblin",       x: 8, y: 4 },
+  const ENEMY_COMP = [
+    { type: "goblin" },
+    { type: "goblinArcher" },
+    { type: "goblin" },
+    { type: "goblin" },
   ];
-  // Deploy zone: bottom two rows of the map.
-  const SPAWN_ROWS = new Set([6, 7]);
+  // Mutable per-map: filled in by makeMap()/applyMapData() with the rolled
+  // positions. Fallback placements live on the back row + top row in case
+  // freshBattle is called before the first applyMapData (it isn't in
+  // practice, but keep the defaults sane).
+  let DEFAULT_ALLY_LOADOUT = ALLY_COMP.map((c, i) => ({ ...c, x: 1 + i * 2, y: ROWS - 1 }));
+  let ENEMY_STARTS         = ENEMY_COMP.map((e, i) => ({ ...e, x: 1 + i, y: 0 }));
+  // Spawn bands at the top + bottom of the map. Both are forced passable.
+  const SPAWN_ROWS = new Set([ROWS - 2, ROWS - 1]);
+  const ENEMY_SPAWN_ROWS = new Set([0, 1]);
   const DEPLOY_BUDGET = 3; // full party of three (Warrior + Archer + Mage)
 
   // === Initiative ===========================================================
@@ -410,8 +447,9 @@
   }
   function rerollMap() {
     if (state.phase !== "deploy") return;
-    MAP = makeMap();
-    onDailyMap = false;
+    applyMapData(undefined, false);
+    state = freshBattle();
+    log = [];
     buildBoard();
     renderSeedChip();
     renderAll();
@@ -1394,8 +1432,7 @@
   function reposAllUnits() { for (const u of state.units) positionUnit(u); }
 
   function startNewBattle() {
-    MAP = makeMap();
-    onDailyMap = false;
+    applyMapData(undefined, false);
     state = freshBattle();
     log = [];
     buildBoard();
@@ -1412,8 +1449,8 @@
   elDeployReroll.addEventListener("click", rerollMap);
 
   // First load: today's daily field — shared by anyone playing the same date.
-  MAP = makeMap(todaysSeed());
-  onDailyMap = true;
+  applyMapData(todaysSeed(), true);
+  state = freshBattle();
   buildBoard();
   renderSeedChip();
   wireTestPanel();
