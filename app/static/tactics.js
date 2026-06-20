@@ -53,9 +53,9 @@
   // Default loadout: one of every class. Warrior pushed forward so the melee
   // fighter closes faster; Archer + Mage sit on the back row to shoot.
   const DEFAULT_ALLY_LOADOUT = [
-    { classId: "warrior", x: 2, y: 7 },
+    { classId: "mage",    x: 2, y: 7 },
     { classId: "archer",  x: 5, y: 7 },
-    { classId: "mage",    x: 8, y: 7 },
+    { classId: "warrior", x: 8, y: 7 },
   ];
   const ENEMY_STARTS = [
     { type: "goblin",       x: 7, y: 0 },

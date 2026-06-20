@@ -5,6 +5,17 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] — 2026-06-19
+
+### Changed — Warrior + Mage swap flanks ("Operation Flank Swap")
+- **Default deploy positions swap on the back row.** Warrior moves
+  from C8 to I8 — the right flank, closer to the enemy cluster at
+  H1 / J1 / I3 / I5. Mage moves from I8 to C8 — the left flank, far
+  from the action. Archer stays at F8 in the middle.
+  - Tactical effect: melee tank closes ground in fewer turns; the
+    fragile Mage gets an extra turn of stand-off distance before
+    enemies reach the back row.
+
 ## [1.18.0] — 2026-06-19
 
 ### Added — Bordered board with grid references ("Operation Grid Reference")
