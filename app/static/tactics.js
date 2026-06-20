@@ -22,15 +22,33 @@
   const IMPASSABLE = new Set(["mountain", "water"]);
 
   // === Unit templates =======================================================
+  // Pokemon-style 7-stat block per unit. Melee damage = Str - Def;
+  // ranged/magic damage = SpAtk - SpDef. Speed drives initiative + tiebreaks.
+  // Atk is reserved for future to-hit / accuracy rolls.
   const UNIT_CLASSES = {
-    warrior: { name: "Warrior", maxHp: 40, atk: 8,  def: 2, moveRange: 3, attackRange: 1, sprite: "warrior" },
-    archer:  { name: "Archer",  maxHp: 26, atk: 7,  def: 0, moveRange: 3, attackRange: 3, sprite: "archer"  },
-    mage:    { name: "Mage",    maxHp: 22, atk: 10, def: 0, moveRange: 2, attackRange: 3, sprite: "mage"    },
+    warrior: {
+      name: "Warrior", sprite: "warrior", moveRange: 3, attackRange: 1,
+      stats: { hp: 40, spd: 8,  str: 10, atk: 8, def: 4, spAtk: 2,  spDef: 2 },
+    },
+    archer:  {
+      name: "Archer",  sprite: "archer",  moveRange: 3, attackRange: 3,
+      stats: { hp: 26, spd: 12, str: 6,  atk: 5, def: 2, spAtk: 8,  spDef: 2 },
+    },
+    mage:    {
+      name: "Mage",    sprite: "mage",    moveRange: 2, attackRange: 3,
+      stats: { hp: 22, spd: 6,  str: 3,  atk: 4, def: 1, spAtk: 12, spDef: 4 },
+    },
   };
   const CLASS_ORDER = ["warrior", "archer", "mage"];
   const ENEMY_TYPES = {
-    goblin:       { name: "Goblin",        maxHp: 20, atk: 4, def: 1, moveRange: 3, attackRange: 1, sprite: "goblin" },
-    goblinArcher: { name: "Goblin Archer", maxHp: 14, atk: 5, def: 0, moveRange: 3, attackRange: 3, sprite: "goblinArcher" },
+    goblin: {
+      name: "Goblin", sprite: "goblin", moveRange: 3, attackRange: 1,
+      stats: { hp: 20, spd: 8,  str: 6, atk: 4, def: 1, spAtk: 2, spDef: 1 },
+    },
+    goblinArcher: {
+      name: "Goblin Archer", sprite: "goblinArcher", moveRange: 3, attackRange: 3,
+      stats: { hp: 14, spd: 10, str: 4, atk: 3, def: 0, spAtk: 7, spDef: 1 },
+    },
   };
   // Default loadout: one of every class. Warrior pushed forward so the melee
   // fighter closes faster; Archer + Mage sit on the back row to shoot.
@@ -50,21 +68,17 @@
   const DEPLOY_BUDGET = 3; // full party of three (Warrior + Archer + Mage)
 
   // === Initiative ===========================================================
-  // 1d20 + modifier per sprite. Ties: ally beats enemy, then creation order.
-  const INITIATIVE_MOD = {
-    warrior:   1,
-    archer:    3,
-    mage:      0,
-    goblin:    1,
-    goblinArcher: 2,
-  };
+  // Initiative = 1d20 + floor(Speed / 4). Ties resolve in this order:
+  // higher raw Speed > ally over enemy > creation order. The Speed
+  // tiebreak makes the new stat matter even when rolls collide.
   function rollInitiative(unit, seq) {
     const roll = Math.floor(Math.random() * 20) + 1;
-    const mod = INITIATIVE_MOD[unit.sprite] ?? 0;
+    const mod = Math.floor((unit.spd ?? 0) / 4);
     unit.initiative = { roll, mod, total: roll + mod, seq };
   }
   function compareInitiative(a, b) {
     if (a.initiative.total !== b.initiative.total) return b.initiative.total - a.initiative.total;
+    if (a.spd !== b.spd) return b.spd - a.spd;
     if (a.kind === "ally" && b.kind !== "ally") return -1;
     if (b.kind === "ally" && a.kind !== "ally") return 1;
     return a.initiative.seq - b.initiative.seq;
@@ -101,16 +115,21 @@
   // === State ================================================================
   let nextUnitId = 1;
   function makeUnit(tmpl, kind, x, y) {
+    const s = tmpl.stats;
     return {
       id: `u${nextUnitId++}`,
       kind, // "ally" | "enemy"
       name: tmpl.name,
       sprite: tmpl.sprite,
       x, y,
-      hp: tmpl.maxHp,
-      maxHp: tmpl.maxHp,
-      atk: tmpl.atk,
-      def: tmpl.def,
+      hp: s.hp,
+      maxHp: s.hp,
+      spd: s.spd,
+      str: s.str,
+      atk: s.atk,
+      def: s.def,
+      spAtk: s.spAtk,
+      spDef: s.spDef,
       moveRange: tmpl.moveRange,
       attackRange: tmpl.attackRange,
       hasActed: false,
@@ -271,7 +290,7 @@
     state.selectedClass = null;
     pushLog(`— Round 1 — Initiative rolled.`, "phase");
     for (const u of sorted) {
-      pushLog(`  ${u.name}: ${u.initiative.total} (d20=${u.initiative.roll}${u.initiative.mod >= 0 ? "+" : ""}${u.initiative.mod})`, "init");
+      pushLog(`  ${u.name}: ${u.initiative.total} (d20=${u.initiative.roll}${u.initiative.mod >= 0 ? "+" : ""}${u.initiative.mod}, Spd ${u.spd})`, "init");
     }
     renderAll();
     void beginTurn();
@@ -540,6 +559,7 @@
     if (state.phase !== "deploy") return;
     elDeployClasses.innerHTML = CLASS_ORDER.map((id) => {
       const c = UNIT_CLASSES[id];
+      const s = c.stats;
       const isSelected = state.selectedClass === id;
       const disabled = remainingDeploy() <= 0 && !isSelected;
       return `
@@ -548,8 +568,9 @@
           <span class="deploy-class-sprite">${spriteSvg(c.sprite, { small: true })}</span>
           <span class="deploy-class-meta">
             <strong>${c.name}</strong>
-            <small>HP ${c.maxHp} · ⚔ ${c.atk} · 🛡 ${c.def}</small>
-            <small>Move ${c.moveRange} · Range ${c.attackRange} · Init +${INITIATIVE_MOD[id] ?? 0}</small>
+            <small>HP ${s.hp} · Move ${c.moveRange} · Rng ${c.attackRange}</small>
+            <small>Str ${s.str} · Def ${s.def} · SpA ${s.spAtk} · SpD ${s.spDef}</small>
+            <small>Spd ${s.spd} · Atk ${s.atk}</small>
           </span>
         </button>`;
     }).join("");
@@ -588,12 +609,13 @@
     const items = state.units.map((u) => {
       const pct = Math.max(0, u.hp / u.maxHp) * 100;
       const status = u.hp <= 0 ? "fallen" : u.hasActed ? "acted" : "ready";
+      const damageStat = u.attackRange > 1 ? `SpA ${u.spAtk}` : `Str ${u.str}`;
       return `
         <li class="roster-row roster-${u.kind} roster-${status}">
           <span class="roster-sprite">${spriteSvg(u.sprite, { small: true })}</span>
           <span class="roster-meta">
             <strong>${escapeHtml(u.name)}</strong>
-            <small>⚔ ${u.atk} · 🛡 ${u.def} · Rng ${u.attackRange}</small>
+            <small>Spd ${u.spd} · ${damageStat} · Rng ${u.attackRange}</small>
           </span>
           <span class="roster-bar">
             <span class="roster-bar-fill" style="width:${pct}%"></span>
@@ -753,13 +775,16 @@
   }
 
   async function resolveAttack(attacker, target) {
-    let dmg = Math.max(1, attacker.atk - target.def);
+    const ranged = manhattan(attacker, target) > 1;
+    // Melee = Strength vs Defense; ranged/magic = SpAtk vs SpDef.
+    let dmg = ranged
+      ? Math.max(1, attacker.spAtk - target.spDef)
+      : Math.max(1, attacker.str   - target.def);
     if (testModeOn) {
       if (testFlags.godMode && target.kind === "ally") dmg = 0;
       if (testFlags.oneShot && attacker.kind === "ally") dmg = target.maxHp;
     }
     target.hp = Math.max(0, target.hp - dmg);
-    const ranged = manhattan(attacker, target) > 1;
     const verb = ranged ? "shoots" : "hits";
     pushLog(`${attacker.name} ${verb} ${target.name} for ${dmg}.`, attacker.kind === "ally" ? "hit-ally" : "hit-enemy");
     if (ranged) {

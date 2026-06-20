@@ -5,6 +5,50 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] — 2026-06-19
+
+### Added — Pokemon-style stat block ("Operation Vital Signs")
+- **Seven stats on every unit**: HP, Speed, Strength, Attack,
+  Defense, Special Attack, Special Defense.
+- New starting stats:
+  | Unit          | HP | Spd | Str | Atk | Def | SpA | SpD |
+  |---------------|----|-----|-----|-----|-----|-----|-----|
+  | Warrior       | 40 | 8   | 10  | 8   | 4   | 2   | 2   |
+  | Archer        | 26 | 12  | 6   | 5   | 2   | 8   | 2   |
+  | Mage          | 22 | 6   | 3   | 4   | 1   | 12  | 4   |
+  | Goblin        | 20 | 8   | 6   | 4   | 1   | 2   | 1   |
+  | Goblin Archer | 14 | 10  | 4   | 3   | 0   | 7   | 1   |
+- **Damage formula split by physical vs. magic / ranged**:
+  - Melee (range 1) `dmg = max(1, attacker.Str - target.Def)`
+  - Ranged or magic (range > 1) `dmg = max(1, attacker.SpAtk - target.SpDef)`
+  Mage now hits like a truck at range (12 SpA - 1 SpD = 11 dmg on
+  Goblins) but is fragile in melee (1 Def vs a Goblin's 6 Str = 5
+  dmg per hit). Warrior's beefy 4 Def cuts goblin melee damage to
+  just 2 per hit — Warrior tanks 20+ hits before going down.
+  Goblin Archer's 7 SpA vs Mage's 4 SpD is only 3 dmg — the Mage's
+  high SpD shrugs off arrows but melts to a melee swing.
+- **Initiative roll now derives from Speed**: `1d20 + floor(Spd/4)`.
+  Hard-coded per-sprite INITIATIVE_MOD table is gone — Speed alone
+  drives the mod. Tie-break order: higher Speed → ally over enemy
+  → creation order.
+- **Attack stat retained for future use** (to-hit / accuracy rolls
+  haven't landed yet; it's exposed on the deploy card but does
+  nothing in 1.16).
+
+### Changed
+- **Deploy class card** now shows the full stat block: HP/Move/Rng,
+  Str/Def/SpA/SpD, Spd/Atk on three lines.
+- **Roster row** swaps the old `⚔ · 🛡 · Rng` line for `Spd · Str|SpA
+  · Rng` — picks Str for melee classes and SpA for ranged so the
+  relevant offense stat surfaces.
+- **Initiative log line** now appends ` · Spd N` so you can see the
+  speed each unit rolled from.
+
+### Up next
+- v1.17 "Operation First Blood" — speed-decides-first combat
+  exchanges with Fire-Emblem-style counter-attacks. Wiring lands
+  next; foundations are in place now that Speed exists.
+
 ## [1.15.0] — 2026-06-19
 
 ### Changed — Allies share lanes ("Operation Open Lanes")

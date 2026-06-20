@@ -57,25 +57,16 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.15.0 "Operation Open Lanes" — allies (and enemies) can
         path through same-kind units; opposite-kind still blocks.
         End-of-move tile still must be empty.
-  - [ ] **Pokemon-style stat block.** Add **Speed, Strength, Attack,
-        Defense, Special Attack, Special Defense** to every unit.
-        Speed already implicitly exists via initiative; broaden into
-        a per-unit number. Strength can drive raw melee damage
-        (separately from the hit-roll Attack stat); Special Attack
-        / Defense govern Mage spells and ranged magic.
-  - [ ] **Wire existing mechanics to the new stat block.** Re-derive
-        melee damage from `Strength - Defense`, ranged/magic damage
-        from `Special Attack - Special Defense`, initiative rolls
-        from `1d20 + Speed/4` (or similar), and surface the stats on
-        the deploy class cards + roster panel.
-  - [ ] **Speed-decides-first combat exchanges.** When two units
-        engage in a single "battle" on the map (attacker swings at
-        defender), both should resolve attacks in one exchange:
-        higher-Speed entity attacks first, defender counter-attacks
-        if still alive. Mirrors Fire Emblem's combat model.
-  - [ ] v1.16.0 "Operation Cartographer" — procedural map generation
+  - [x] v1.16.0 "Operation Vital Signs" — Pokemon-style stat block
+        (HP, Speed, Strength, Attack, Defense, SpAtk, SpDef) on
+        every unit; damage formula splits melee (Str-Def) and
+        ranged/magic (SpAtk-SpDef); initiative now 1d20+Spd/4.
+  - [ ] v1.17.0 "Operation First Blood" — speed-decides-first
+        combat exchanges (Fire-Emblem-style counter-attack on
+        engage; higher Speed strikes first).
+  - [ ] v1.18.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
-  - [ ] v1.17.0 "Operation War Drum" — animations + AI improvements.
+  - [ ] v1.19.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 
