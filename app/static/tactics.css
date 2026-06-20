@@ -81,6 +81,8 @@ a { color: var(--md-sys-color-primary); }
 .phase-chip.phase-state[data-phase="enemy"]   { color: var(--md-sys-color-error); }
 .phase-chip.phase-state[data-phase="battle"]  { color: var(--md-sys-color-on-surface-variant); }
 .phase-chip.phase-state[data-phase="done"]    { color: var(--md-sys-color-secondary); }
+.phase-chip.seed-chip[data-kind="daily"]  { color: var(--md-sys-color-ok); }
+.phase-chip.seed-chip[data-kind="custom"] { color: var(--md-sys-color-on-surface-variant); }
 
 /* Main grid ---------------------------------------------------------------- */
 .tactics-main {

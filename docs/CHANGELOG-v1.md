@@ -5,6 +5,33 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] — 2026-06-20
+
+### Added — Daily-seed maps ("Operation Sunrise Field")
+- **Page-load map is now seeded from today's date** (YYYYMMDD as a
+  mulberry32 seed). Any player visiting `/tactics` on the same date
+  gets the same procgen field — a shared "daily challenge"
+  battlefield. The seed rolls over at local midnight.
+- **New seed chip in the HUD** between TEST and the round chip:
+  - `Daily 2026-06-20` in OK-green when on the daily field.
+  - `Custom map` in muted grey after a re-roll or after Skirmish-
+    again.
+- **Re-roll Map** in the deploy panel now switches to a *random*
+  seed — useful when today's daily layout is rough and the player
+  wants a do-over, with the chip flipping to "Custom" to signal
+  they've gone off-script.
+- **Skirmish-again** (from the outcome modal) also moves off the
+  daily seed onto a fresh random one, so back-to-back battles
+  aren't on identical terrain.
+- `makeMap(seedOverride?)` takes an optional seed; calling with no
+  arg keeps the existing random behavior.
+
+### Why it's on-theme
+This is the first step toward making the "Daily" in DailyDefense
+mean something concrete — same field everywhere on the same day.
+Future versions can layer leaderboards, par-turn counts, or
+shared replays on top.
+
 ## [1.25.0] — 2026-06-20
 
 ### Changed — Enemy AI reads terrain ("Operation Field Smarts")

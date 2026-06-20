@@ -87,9 +87,12 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.25.0 "Operation Field Smarts" — enemy AI scores tiles by
         terrain bonuses (forest/ruins cover, hill high-ground for
         melee engagements).
-  - [ ] v1.26.0 "Operation Biome Lab" — biome themes (forest / cave /
+  - [x] v1.26.0 "Operation Sunrise Field" — daily-seed maps tied to
+        today's date; seed chip in HUD; Re-roll + Skirmish-again
+        switch to a random seed.
+  - [ ] v1.27.0 "Operation Biome Lab" — biome themes (forest / cave /
         volcano colour palettes) on top of the random layout.
-  - [ ] v1.27.0 "Operation War Drum" — animations + AI improvements.
+  - [ ] v1.28.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

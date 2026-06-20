@@ -28,9 +28,25 @@
     return ENEMY_STARTS.some((p) => p.x === x && p.y === y);
   }
 
-  function makeMap() {
-    // Lightweight mulberry32 PRNG seeded with crypto-ish randomness.
-    let s = (Math.random() * 0xFFFFFFFF) >>> 0;
+  // Today's date as a stable YYYYMMDD integer — same value all day for any
+  // player on the same date, so the no-arg map on first load is the shared
+  // "daily challenge" field. Re-roll + Skirmish-again switch to a random
+  // seed so the player can deviate.
+  function todaysSeed() {
+    const d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  function todaysSeedLabel() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+  // `seedOverride` is optional: pass a number for a deterministic field,
+  // leave it undefined for a fresh random one.
+  function makeMap(seedOverride) {
+    // Lightweight mulberry32 PRNG. Seed from arg or Math.random().
+    let s = ((seedOverride ?? Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0) || 1;
     const rng = () => {
       s = (s + 0x6D2B79F5) >>> 0;
       let t = s;
@@ -92,6 +108,8 @@
 
   // Mutable because we regenerate it on every Skirmish-again.
   let MAP;
+  // Tracks the source of the current MAP so the HUD chip can label it.
+  let onDailyMap = false;
 
   // === Unit templates =======================================================
   // Pokemon-style 7-stat block per unit. Melee damage = Str - Def;
@@ -298,6 +316,17 @@
   function clearTileInfo() {
     if (elTileInfo) elTileInfo.textContent = "Hover or tap a tile to inspect it.";
   }
+  function renderSeedChip() {
+    const el = $("seed-chip");
+    if (!el) return;
+    if (onDailyMap) {
+      el.textContent = `Daily ${todaysSeedLabel()}`;
+      el.dataset.kind = "daily";
+    } else {
+      el.textContent = "Custom map";
+      el.dataset.kind = "custom";
+    }
+  }
 
   function pushLog(text, kind) {
     log.unshift({ text, kind: kind || "" });
@@ -382,9 +411,11 @@
   function rerollMap() {
     if (state.phase !== "deploy") return;
     MAP = makeMap();
+    onDailyMap = false;
     buildBoard();
+    renderSeedChip();
     renderAll();
-    pushLog("New battlefield rolled.", "phase");
+    pushLog("New battlefield rolled — custom field.", "phase");
   }
 
   function beginBattle() {
@@ -1364,9 +1395,11 @@
 
   function startNewBattle() {
     MAP = makeMap();
+    onDailyMap = false;
     state = freshBattle();
     log = [];
     buildBoard();
+    renderSeedChip();
     pushLog("Fresh battlefield. Pick classes and hit Begin Battle.", "phase");
     renderAll();
     hideOutcomeModal();
@@ -1378,8 +1411,11 @@
   elDeployStart.addEventListener("click", beginBattle);
   elDeployReroll.addEventListener("click", rerollMap);
 
-  MAP = makeMap();
+  // First load: today's daily field — shared by anyone playing the same date.
+  MAP = makeMap(todaysSeed());
+  onDailyMap = true;
   buildBoard();
+  renderSeedChip();
   wireTestPanel();
   pushLog("Muster your army. Pick classes and place them on the cyan spawn tiles.", "phase");
   if (testModeOn) pushLog("Test mode active. Bypass controls in the red sidebar panel.", "phase");
