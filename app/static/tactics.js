@@ -993,18 +993,38 @@
     return allies[0];
   }
 
+  // Tile score for enemy AI: lower is better. Drives toward attack range
+  // first, but factors in terrain bonuses for cover (forest / ruins) and
+  // for melee high-ground (hill) when we'd actually swing from there.
+  function scoreEnemyTile(enemy, target, x, y, cost) {
+    const distance = manhattan({ x, y }, target);
+    const reachScore = Math.max(0, distance - enemy.attackRange);
+    const terrain = terrainAt(x, y);
+    // Distance dominates, cost is the next dial, terrain modifiers nudge
+    // ties + close calls.
+    let score = reachScore * 1000 + cost * 5;
+    if (terrain === "forest") score -= 6;                                     // +1 Def + +1 SpDef cover
+    if (terrain === "ruins")  score -= 4;                                     // +1 SpDef cover
+    if (terrain === "hill" && enemy.attackRange === 1 && distance <= 1) {
+      score -= 12;                                                            // +1 Str melee high-ground; only matters if swinging
+    }
+    return score;
+  }
+
   async function enemyTakeTurn(enemy) {
     if (enemy.hp <= 0) return;
     const target = pickEnemyTarget(enemy);
     if (!target) return;
     const reach = reachableFrom(enemy, enemy.moveRange);
-    let best = { x: enemy.x, y: enemy.y, score: Math.max(0, manhattan(enemy, target) - enemy.attackRange), cost: 0 };
+    let best = {
+      x: enemy.x, y: enemy.y, cost: 0,
+      score: scoreEnemyTile(enemy, target, enemy.x, enemy.y, 0),
+    };
     for (const [k, cost] of reach) {
       const [x, y] = k.split(",").map(Number);
       const occ = unitAt(x, y);
       if (occ && occ.id !== enemy.id) continue;
-      const d = manhattan({ x, y }, target);
-      const score = Math.max(0, d - enemy.attackRange);
+      const score = scoreEnemyTile(enemy, target, x, y, cost);
       if (score < best.score || (score === best.score && cost < best.cost)) {
         best = { x, y, score, cost };
       }

@@ -5,6 +5,37 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] — 2026-06-20
+
+### Changed — Enemy AI reads terrain ("Operation Field Smarts")
+- **Enemy tile-scoring now factors terrain bonuses.** The old
+  reach-distance-then-cost picker is replaced by a weighted formula:
+  ```
+  score = reachScore * 1000 + cost * 5 + terrainMod
+  ```
+  with terrain modifiers:
+  | Terrain                                 | Mod  |
+  |-----------------------------------------|------|
+  | Forest (+1 Def, +1 SpDef cover)         | −6   |
+  | Ruins (+1 SpDef cover)                  | −4   |
+  | Hill (+1 Str melee, only if swinging)   | −12  |
+  Lowest score wins. Reach-distance still dominates — the AI gets
+  into attack range first — and cost tiebreaks before terrain. But
+  when two reachable tiles have the same reach, terrain decides:
+  enemies prefer forest/ruins for cover, and melee enemies will
+  detour onto a hill when they can swing from it.
+- **Behavioural effects:**
+  - Goblins about to engage will pick a hill destination over a
+    grass one if the hill puts them adjacent to the target —
+    trading a turn's worth of move cost for the +1 Str high-ground.
+  - Goblin Archers prefer parking on forest or ruins tiles when
+    they can shoot from range; sitting on a covered tile cuts
+    incoming counter-shots.
+  - The cost coefficient (5) keeps the AI from wandering far for
+    minor terrain gains: a forest tile 2 moves out (cost 10 − 6 =
+    4) loses to a grass tile in current range (cost 0).
+- Pure scoring change — no log changes, no new sprites.
+
 ## [1.24.0] — 2026-06-19
 
 ### Added — Tile inspector ("Operation Recon Tap")
