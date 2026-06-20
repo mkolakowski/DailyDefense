@@ -238,6 +238,7 @@
   const $ = (id) => document.getElementById(id);
   const elBoard = $("tactics-board");
   const elStatus = $("tactics-status");
+  const elTileInfo = $("tile-info");
   const elVersion = $("app-version");
   const elLog = $("tactics-log");
   const elTurn = $("battle-turn");
@@ -272,6 +273,31 @@
   const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   const currentUnit = () => state.units.find((u) => u.id === state.initiativeOrder[state.currentTurnIndex]);
   const isMyTurn = (u) => state.phase === "battle" && currentUnit()?.id === u.id;
+
+  const TERRAIN_INFO = {
+    grass:    { label: "Grass",    bonus: "" },
+    forest:   { label: "Forest",   bonus: "+1 Def, +1 SpDef cover" },
+    hill:     { label: "Hill",     bonus: "+1 Str (melee attacks)" },
+    ruins:    { label: "Ruins",    bonus: "+1 SpDef cover" },
+    mountain: { label: "Mountain", bonus: "impassable" },
+    water:    { label: "Water",    bonus: "impassable" },
+  };
+  function showTileInfo(x, y) {
+    if (!elTileInfo) return;
+    const terrain = terrainAt(x, y);
+    const info = TERRAIN_INFO[terrain] || { label: terrain, bonus: "" };
+    const u = unitAt(x, y);
+    const parts = [
+      `<span class="ti-label">${tileLabel(x, y)}</span>`,
+      `<span class="ti-terrain">${info.label}</span>`,
+    ];
+    if (info.bonus) parts.push(`<span class="ti-bonus">${info.bonus}</span>`);
+    if (u) parts.push(`<span class="ti-occupant">· ${escapeHtml(u.name)} ${Math.max(0, u.hp)}/${u.maxHp}</span>`);
+    elTileInfo.innerHTML = parts.join(" ");
+  }
+  function clearTileInfo() {
+    if (elTileInfo) elTileInfo.textContent = "Hover or tap a tile to inspect it.";
+  }
 
   function pushLog(text, kind) {
     log.unshift({ text, kind: kind || "" });
@@ -478,11 +504,13 @@
         coords.className = "tile-coords";
         coords.textContent = tileLabel(x, y);
         tile.appendChild(coords);
-        tile.addEventListener("click", () => onTileClick(x, y));
+        tile.addEventListener("click", () => { showTileInfo(x, y); onTileClick(x, y); });
+        tile.addEventListener("mouseenter", () => showTileInfo(x, y));
         frag.appendChild(tile);
       }
     }
     elBoard.appendChild(frag);
+    elBoard.addEventListener("mouseleave", clearTileInfo);
     renderUnits();
   }
 

@@ -5,6 +5,32 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] — 2026-06-19
+
+### Added — Tile inspector ("Operation Recon Tap")
+- **New `#tile-info` line** sits below the status line. Shows the
+  hovered (desktop) or tapped (mobile) tile's full info at a glance:
+  - **Grid label** (`A1`, `F3`, etc.) in secondary gold.
+  - **Terrain name** (Grass / Forest / Hill / Ruins / Mountain /
+    Water) in primary text.
+  - **Bonus summary** in primary blue when the tile grants one
+    (e.g. `+1 Def, +1 SpDef cover`, `+1 Str (melee attacks)`,
+    `impassable`).
+  - **Occupant** suffix (`· Goblin 14/20`) when a unit is on the
+    tile, so you can see HP at a glance without checking the
+    roster.
+- Updates on **`mouseenter`** for every tile + on **`click`** so
+  desktop hover and mobile tap both feel immediate.
+- Clears back to "Hover or tap a tile to inspect it." when the
+  cursor leaves the board.
+
+### Why
+Teaches the new cover system (v1.21 + v1.23) without forcing the
+player to memorise the legend. Hover a hill, see `+1 Str (melee
+attacks)`; hover a ruin, see `+1 SpDef cover`. Surfaces enemy HP
+inline too — useful for "can I finish this Goblin in one hit?"
+calls.
+
 ## [1.23.0] — 2026-06-19
 
 ### Added — Two new cover terrains ("Operation Higher Ground")

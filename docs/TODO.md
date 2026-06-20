@@ -81,9 +81,12 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.23.0 "Operation Higher Ground" — adds Hill (+1 Str melee)
         and Ruins (+1 SpDef) terrain types; procgen mix updated; log
         surfaces every active bonus.
-  - [ ] v1.24.0 "Operation Biome Lab" — biome themes (forest / cave /
+  - [x] v1.24.0 "Operation Recon Tap" — tile inspector line under
+        the status; shows label / terrain / bonus / occupant HP on
+        hover or tap.
+  - [ ] v1.25.0 "Operation Biome Lab" — biome themes (forest / cave /
         volcano colour palettes) on top of the random layout.
-  - [ ] v1.25.0 "Operation War Drum" — animations + AI improvements.
+  - [ ] v1.26.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 
