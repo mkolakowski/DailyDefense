@@ -5,6 +5,39 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.0] — 2026-06-20
+
+### Added — Biomes ("Operation Biome Lab")
+- **Every procgen map now rolls a biome** from the same PRNG that
+  picks terrain + unit positions. Three biomes ship in this release:
+  | Biome    | Vibe                       | Heavier in        |
+  |----------|----------------------------|-------------------|
+  | Forest   | Lush greens, leafy canopy  | Forest (25%)      |
+  | Cave     | Slate + cool dim palette   | Ruins (10%), Mountain (8%) |
+  | Volcano  | Ash, rust, glowing lava    | Hill (10%), lava-coloured Water |
+- **Terrain weights are biome-specific** — Cave maps feel rockier
+  and ruined; Volcano maps push more hills and replace pools with
+  bright orange "lava" tiles (still impassable, just hot). Forest
+  is the baseline.
+- **Per-biome palette overrides via a `.biome-*` class on the
+  board.** Same `terrain-grass` / `terrain-forest` etc. classes,
+  but the cascaded `.tactics-board.biome-cave .tile.terrain-grass`
+  rule recolors them. No new sprites needed.
+- **Daily seed locks biome too** — everyone playing the same date
+  gets the same biome AND the same terrain AND the same unit
+  placements.
+- **Seed chip surfaces the biome name:** `Daily 2026-06-20 ·
+  Forest` or `Custom · Volcano`.
+
+### Notes
+- `BIOMES` table lives at the top of tactics.js next to `TERRAIN`;
+  adding a new biome is one entry + matching CSS palette block.
+- Weights for each biome's six-terrain distribution sum to 1.0;
+  `rollTerrain()` walks the cumulative distribution.
+- Tile cover bonuses (forest +Def, hill +Str, ruins +SpDef) work
+  the same regardless of biome — the biome only changes color and
+  frequency.
+
 ## [1.27.0] — 2026-06-20
 
 ### Changed — Portrait map + randomized opposing-side placement ("Operation Tall Order")

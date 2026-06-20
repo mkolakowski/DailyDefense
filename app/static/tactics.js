@@ -21,6 +21,29 @@
   // Re-export under the old name so the rest of the file keeps using it.
   const IMPASSABLE = IMPASSABLE_TERRAIN;
 
+  // Biome library — each biome gets a CSS class scope (for palette overrides)
+  // and its own weighted terrain distribution. Forest is the baseline; Cave
+  // is rocky + ruined; Volcano is hot, hilly, and lava-streaked.
+  // Weight order: M, W, H, R, T, grass. Must sum to 1.0.
+  const BIOMES = {
+    forest:  { name: "Forest",  cls: "biome-forest",
+               weights: [0.03, 0.05, 0.02, 0.02, 0.25, 0.63] },
+    cave:    { name: "Cave",    cls: "biome-cave",
+               weights: [0.08, 0.02, 0.03, 0.10, 0.04, 0.73] },
+    volcano: { name: "Volcano", cls: "biome-volcano",
+               weights: [0.05, 0.05, 0.10, 0.03, 0.05, 0.72] },
+  };
+  const BIOME_KEYS = Object.keys(BIOMES);
+  const TERRAIN_GLYPHS = ["M", "W", "H", "R", "T", "."];
+  function rollTerrain(r, biome) {
+    let acc = 0;
+    for (let i = 0; i < biome.weights.length; i++) {
+      acc += biome.weights[i];
+      if (r < acc) return TERRAIN_GLYPHS[i];
+    }
+    return ".";
+  }
+
   // These tiles must be passable in every generated map: both the top
   // enemy-spawn band and the bottom ally-spawn band, so a random pick
   // anywhere inside them is always valid.
@@ -66,19 +89,17 @@
       }
       return all.slice(0, count);
     }
+    // Pick a biome up-front from the same rng so daily seed locks the
+    // biome too.
+    const biomeKey = BIOME_KEYS[Math.floor(rng() * BIOME_KEYS.length)];
+    const biome = BIOMES[biomeKey];
     function attemptGrid() {
       const grid = [];
       for (let y = 0; y < ROWS; y++) {
         let row = "";
         for (let x = 0; x < COLS; x++) {
           if (isForcedPassable(x, y)) { row += "."; continue; }
-          const r = rng();
-          if (r < 0.03) row += "M";       // mountain (3%)
-          else if (r < 0.06) row += "W";  // water (3%)
-          else if (r < 0.09) row += "H";  // hill (3%)
-          else if (r < 0.12) row += "R";  // ruins (3%)
-          else if (r < 0.28) row += "T";  // forest (16%)
-          else row += ".";                // grass (72%)
+          row += rollTerrain(rng(), biome);
         }
         grid.push(row);
       }
@@ -113,6 +134,7 @@
       if (isPlayable(g, allyPos, enemyPos)) {
         return {
           grid: g,
+          biome,
           allyLoadout: ALLY_COMP.map((c, i) => ({ ...c, x: allyPos[i].x, y: allyPos[i].y })),
           enemyStarts: ENEMY_COMP.map((e, i) => ({ ...e, x: enemyPos[i].x, y: enemyPos[i].y })),
         };
@@ -123,6 +145,7 @@
     const enemyPos = pickPositions([...ENEMY_SPAWN_ROWS], ENEMY_COMP.length);
     return {
       grid: attemptGrid(),
+      biome,
       allyLoadout: ALLY_COMP.map((c, i) => ({ ...c, x: allyPos[i].x, y: allyPos[i].y })),
       enemyStarts: ENEMY_COMP.map((e, i) => ({ ...e, x: enemyPos[i].x, y: enemyPos[i].y })),
     };
@@ -134,6 +157,7 @@
     MAP = r.grid;
     DEFAULT_ALLY_LOADOUT = r.allyLoadout;
     ENEMY_STARTS = r.enemyStarts;
+    currentBiome = r.biome;
     onDailyMap = !!isDaily;
   }
 
@@ -141,6 +165,8 @@
   let MAP;
   // Tracks the source of the current MAP so the HUD chip can label it.
   let onDailyMap = false;
+  // Current biome reference (set by applyMapData).
+  let currentBiome = BIOMES.forest;
 
   // === Unit templates =======================================================
   // Pokemon-style 7-stat block per unit. Melee damage = Str - Def;
@@ -356,11 +382,12 @@
   function renderSeedChip() {
     const el = $("seed-chip");
     if (!el) return;
+    const biomeTag = currentBiome ? ` · ${currentBiome.name}` : "";
     if (onDailyMap) {
-      el.textContent = `Daily ${todaysSeedLabel()}`;
+      el.textContent = `Daily ${todaysSeedLabel()}${biomeTag}`;
       el.dataset.kind = "daily";
     } else {
-      el.textContent = "Custom map";
+      el.textContent = `Custom${biomeTag}`;
       el.dataset.kind = "custom";
     }
   }
@@ -537,6 +564,9 @@
   function buildBoard() {
     elBoard.innerHTML = "";
     elBoard.style.gridTemplateColumns = `repeat(${COLS}, var(--tile-size))`;
+    // Reset + apply biome palette class so terrain colors reskin per map.
+    for (const k of BIOME_KEYS) elBoard.classList.remove(BIOMES[k].cls);
+    if (currentBiome) elBoard.classList.add(currentBiome.cls);
     // Column labels (A, B, C, …) above the board.
     const colLabels = $("board-col-labels");
     if (colLabels && colLabels.children.length === 0) {

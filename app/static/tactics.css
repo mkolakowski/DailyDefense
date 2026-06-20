@@ -213,6 +213,23 @@ a { color: var(--md-sys-color-primary); }
 .tile.terrain-mountain { background: #4d4036; cursor: not-allowed; }
 .tile.terrain-water    { background: #1d3656; cursor: not-allowed; }
 
+/* Biome palette overrides ------------------------------------------------ */
+/* Forest = baseline (matches default colors above), no overrides needed. */
+
+.tactics-board.biome-cave .tile.terrain-grass    { background: #2a2c34; }
+.tactics-board.biome-cave .tile.terrain-forest   { background: #1f2025; }
+.tactics-board.biome-cave .tile.terrain-hill     { background: #4a4842; }
+.tactics-board.biome-cave .tile.terrain-ruins    { background: #555562; }
+.tactics-board.biome-cave .tile.terrain-mountain { background: #3a342c; }
+.tactics-board.biome-cave .tile.terrain-water    { background: #1a2840; }
+
+.tactics-board.biome-volcano .tile.terrain-grass    { background: #3c2e26; }
+.tactics-board.biome-volcano .tile.terrain-forest   { background: #2a1d18; }
+.tactics-board.biome-volcano .tile.terrain-hill     { background: #804030; }
+.tactics-board.biome-volcano .tile.terrain-ruins    { background: #503020; }
+.tactics-board.biome-volcano .tile.terrain-mountain { background: #2c1410; }
+.tactics-board.biome-volcano .tile.terrain-water    { background: #c83a18; }  /* lava */
+
 .tile.terrain-forest::after {
   content: "";
   position: absolute;

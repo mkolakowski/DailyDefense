@@ -93,8 +93,9 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.27.0 "Operation Tall Order" — portrait 7×12 map; both
         armies randomized along opposite-border spawn bands; daily
         seed locks both map AND positions.
-  - [ ] v1.28.0 "Operation Biome Lab" — biome themes (forest / cave /
-        volcano colour palettes) on top of the random layout.
+  - [x] v1.28.0 "Operation Biome Lab" — biome roll per map (Forest /
+        Cave / Volcano) with palette overrides + biome-specific
+        terrain weights; biome name surfaced in seed chip.
   - [ ] v1.29.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
