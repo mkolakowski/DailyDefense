@@ -61,9 +61,10 @@ Running list of work items for DailyDefense. Move items into the changelog
         (HP, Speed, Strength, Attack, Defense, SpAtk, SpDef) on
         every unit; damage formula splits melee (Str-Def) and
         ranged/magic (SpAtk-SpDef); initiative now 1d20+Spd/4.
-  - [ ] v1.17.0 "Operation First Blood" — speed-decides-first
+  - [x] v1.17.0 "Operation First Blood" — speed-decides-first
         combat exchanges (Fire-Emblem-style counter-attack on
-        engage; higher Speed strikes first).
+        engage; higher Speed strikes first; counter only lands if
+        defender's attackRange reaches back).
   - [ ] v1.18.0 "Operation Cartographer" — procedural map generation
         with biomes, choke points, and terrain cover bonuses.
   - [ ] v1.19.0 "Operation War Drum" — animations + AI improvements.

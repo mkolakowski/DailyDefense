@@ -768,10 +768,31 @@
     if (!attacker || !target) return;
     state.busy = true;
     renderHud();
-    await resolveAttack(attacker, target);
+    await resolveCombat(attacker, target);
     state.busy = false;
     if (checkOutcome()) return;
     await endCurrentTurn();
+  }
+
+  // === Combat exchange ======================================================
+  // One "battle" between two units. Higher Speed strikes first (attacker
+  // wins Speed ties since they initiated). The other side counter-strikes
+  // if still alive AND able to reach back with their own attackRange.
+  async function resolveCombat(attacker, defender) {
+    pushLog(`Battle: ${attacker.name} (Spd ${attacker.spd}) vs ${defender.name} (Spd ${defender.spd}).`, "phase");
+    const order = attacker.spd >= defender.spd
+      ? [{ s: attacker, v: defender }, { s: defender, v: attacker }]
+      : [{ s: defender, v: attacker }, { s: attacker, v: defender }];
+    for (let i = 0; i < order.length; i++) {
+      const { s, v } = order[i];
+      if (s.hp <= 0 || v.hp <= 0) continue;
+      if (manhattan(s, v) > s.attackRange) {
+        if (i > 0) pushLog(`${s.name} can't counter — ${v.name} is out of range.`, "");
+        continue;
+      }
+      await resolveAttack(s, v);
+      if (i === 0) await sleep(220);
+    }
   }
 
   async function resolveAttack(attacker, target) {
@@ -848,7 +869,7 @@
     if (manhattan(enemy, target) <= enemy.attackRange && target.hp > 0) {
       state.busy = true;
       renderHud();
-      await resolveAttack(enemy, target);
+      await resolveCombat(enemy, target);
       state.busy = false;
     }
   }

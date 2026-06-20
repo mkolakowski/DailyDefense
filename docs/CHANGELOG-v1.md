@@ -5,6 +5,37 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] — 2026-06-19
+
+### Added — Speed-first combat exchanges ("Operation First Blood")
+- **Every "battle" between two units is now a full Fire-Emblem
+  exchange.** When one unit attacks another:
+  1. Higher-Speed combatant **strikes first**. (Attacker wins Speed
+     ties — they initiated.)
+  2. If the other is still alive AND has the target in their own
+     `attackRange`, they **counter-strike** with their own damage.
+  3. Either side dying during the exchange ends it; overkill is
+     skipped.
+- New `resolveCombat()` orchestrates the exchange. Both `doAttack()`
+  (ally turns) and `enemyTakeTurn()` (AI turns) now go through it,
+  so ally and enemy initiated attacks both trigger counters.
+- **Speed actually matters now**: a fast Archer (Spd 12) who hits a
+  slow Mage (Spd 6) at range 3 will land both their shot AND eat the
+  Mage's bolt back — but if the Mage is faster than the Archer, the
+  Mage's bolt strikes first. Counter-attacks only land if the
+  defender has the attacker in their attackRange, so:
+  - Range-3 Archer shooting a melee Goblin from distance 3 → no
+    counter (Goblin's range 1 doesn't reach back).
+  - Range-3 Archer vs Goblin Archer (both range 3) → full exchange.
+  - Adjacent Warrior vs Goblin → full exchange (both range 1).
+
+### Changed
+- Combat log opens each engagement with `Battle: X (Spd N) vs Y
+  (Spd N).` so the strike order is readable at a glance.
+- If a counter can't land (defender out of range), the log says
+  "X can't counter — Y is out of range." rather than silently
+  dropping it.
+
 ## [1.16.0] — 2026-06-19
 
 ### Added — Pokemon-style stat block ("Operation Vital Signs")
