@@ -545,6 +545,39 @@ a { color: var(--md-sys-color-primary); }
 .battle-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .deploy-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .deploy-actions .action-btn { width: 100%; }
+
+/* Biome picker --------------------------------------------------------- */
+.biome-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.biome-picker-label { font-size: 11px; }
+.biome-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 70px;
+  min-height: 36px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: filter 80ms ease, transform 80ms ease, border-color 80ms ease;
+}
+.biome-btn.biome-forest  { background: #1d3a26; }
+.biome-btn.biome-cave    { background: #2a2c34; }
+.biome-btn.biome-volcano { background: #3c2e26; }
+.biome-btn:hover  { filter: brightness(1.15); border-color: var(--md-sys-color-secondary); }
+.biome-btn:active { filter: brightness(0.9); transform: translateY(1px); }
 .action-btn {
   -webkit-appearance: none;
   appearance: none;

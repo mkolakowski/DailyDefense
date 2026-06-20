@@ -5,6 +5,30 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.0] — 2026-06-20
+
+### Added — Biome picker ("Operation Biome Pick")
+- **Three biome buttons in the deploy panel** below the existing
+  Begin Battle / Re-roll Map row: **Forest**, **Cave**, **Volcano**.
+  Each button is tinted with that biome's signature terrain color
+  (forest green, cave slate, volcano rust) so the palette preview is
+  obvious without reading.
+- **Tapping a biome re-rolls the map with that biome forced** —
+  same procgen pipeline, just skipping the random biome roll. The
+  seed switches to a fresh random one and the seed chip flips to
+  `Custom · Cave` (or whichever was picked).
+- **`makeMap(seedOverride, biomeOverride)`** takes an optional
+  second argument; if omitted, biome rolls from the PRNG as before
+  (preserves daily-seed behavior). `applyMapData` threads it through.
+- **`pickBiome(key)`** is the new orchestrator: deploy-phase only,
+  resets battle state, rebuilds tiles, logs `Battlefield set to Cave.`.
+
+### Notes
+- The Re-roll Map button is unchanged — still gives you a fully
+  random map + biome roll, useful when you don't care which biome.
+- Biome buttons fire only during the deploy phase, so once Begin
+  Battle is hit the field is locked.
+
 ## [1.28.0] — 2026-06-20
 
 ### Added — Biomes ("Operation Biome Lab")

@@ -96,7 +96,9 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.28.0 "Operation Biome Lab" — biome roll per map (Forest /
         Cave / Volcano) with palette overrides + biome-specific
         terrain weights; biome name surfaced in seed chip.
-  - [ ] v1.29.0 "Operation War Drum" — animations + AI improvements.
+  - [x] v1.29.0 "Operation Biome Pick" — biome picker buttons in
+        the deploy panel; tap to re-roll with a forced biome.
+  - [ ] v1.30.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

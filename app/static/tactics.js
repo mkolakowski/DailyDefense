@@ -69,7 +69,7 @@
   // leave it undefined for a fresh random one. Returns the grid + the
   // randomly-rolled ally and enemy starting positions (so daily seed locks
   // map AND positions identically for every player on the same date).
-  function makeMap(seedOverride) {
+  function makeMap(seedOverride, biomeOverride) {
     // Lightweight mulberry32 PRNG. Seed from arg or Math.random().
     let s = ((seedOverride ?? Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0) || 1;
     const rng = () => {
@@ -89,9 +89,11 @@
       }
       return all.slice(0, count);
     }
-    // Pick a biome up-front from the same rng so daily seed locks the
-    // biome too.
-    const biomeKey = BIOME_KEYS[Math.floor(rng() * BIOME_KEYS.length)];
+    // Pick a biome up-front. If the caller forced one (biome picker), use
+    // it; otherwise roll from the same rng so daily seed locks the biome.
+    const biomeKey = (biomeOverride && BIOMES[biomeOverride])
+      ? biomeOverride
+      : BIOME_KEYS[Math.floor(rng() * BIOME_KEYS.length)];
     const biome = BIOMES[biomeKey];
     function attemptGrid() {
       const grid = [];
@@ -152,13 +154,25 @@
   }
 
   // Apply a fresh map (and the positions baked into it) to module state.
-  function applyMapData(seedOverride, isDaily) {
-    const r = makeMap(seedOverride);
+  function applyMapData(seedOverride, isDaily, biomeOverride) {
+    const r = makeMap(seedOverride, biomeOverride);
     MAP = r.grid;
     DEFAULT_ALLY_LOADOUT = r.allyLoadout;
     ENEMY_STARTS = r.enemyStarts;
     currentBiome = r.biome;
     onDailyMap = !!isDaily;
+  }
+
+  function pickBiome(biomeKey) {
+    if (state.phase !== "deploy") return;
+    if (!BIOMES[biomeKey]) return;
+    applyMapData(undefined, false, biomeKey);
+    state = freshBattle();
+    log = [];
+    buildBoard();
+    renderSeedChip();
+    renderAll();
+    pushLog(`Battlefield set to ${BIOMES[biomeKey].name}.`, "phase");
   }
 
   // Mutable because we regenerate it on every Skirmish-again.
@@ -1477,6 +1491,9 @@
   elOutcomeAgain.addEventListener("click", startNewBattle);
   elDeployStart.addEventListener("click", beginBattle);
   elDeployReroll.addEventListener("click", rerollMap);
+  for (const btn of document.querySelectorAll(".biome-btn[data-biome]")) {
+    btn.addEventListener("click", () => pickBiome(btn.dataset.biome));
+  }
 
   // First load: today's daily field — shared by anyone playing the same date.
   applyMapData(todaysSeed(), true);
