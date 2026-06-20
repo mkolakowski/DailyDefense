@@ -481,6 +481,8 @@ a { color: var(--md-sys-color-primary); }
 
 /* Action buttons ----------------------------------------------------------- */
 .battle-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.deploy-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.deploy-actions .action-btn { width: 100%; }
 .action-btn {
   -webkit-appearance: none;
   appearance: none;

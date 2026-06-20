@@ -76,9 +76,11 @@ Running list of work items for DailyDefense. Move items into the changelog
   - [x] v1.21.0 "Operation Take Cover" — forest tiles grant +1 Def
         and +1 SpDef to their occupant; combat log calls out
         "(forest cover)" when the bonus applies.
-  - [ ] v1.22.0 "Operation Biome Lab" — biome themes (forest / cave /
+  - [x] v1.22.0 "Operation Mulligan" — Re-roll Map button in the
+        deploy panel for a fresh procgen field before Begin Battle.
+  - [ ] v1.23.0 "Operation Biome Lab" — biome themes (forest / cave /
         volcano colour palettes) on top of the random layout.
-  - [ ] v1.23.0 "Operation War Drum" — animations + AI improvements.
+  - [ ] v1.24.0 "Operation War Drum" — animations + AI improvements.
 
 ## Material Design migration (carried over from 0.9.0)
 

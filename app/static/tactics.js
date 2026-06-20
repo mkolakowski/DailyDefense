@@ -241,6 +241,7 @@
   const elDeployRemaining = $("deploy-remaining");
   const elDeployClasses = $("deploy-classes");
   const elDeployStart = $("deploy-start");
+  const elDeployReroll = $("deploy-reroll");
   const elInitiativeList = $("initiative-list");
   const elRoster = $("unit-roster");
   const elOutcomeBackdrop = $("outcome-backdrop");
@@ -343,6 +344,14 @@
     pushLog(`${u.name} stood down.`, "");
     renderAll();
   }
+  function rerollMap() {
+    if (state.phase !== "deploy") return;
+    MAP = makeMap();
+    buildBoard();
+    renderAll();
+    pushLog("New battlefield rolled.", "phase");
+  }
+
   function beginBattle() {
     if (state.phase !== "deploy") return;
     // Roll initiative for every unit, assign creation-order seq for tiebreak.
@@ -1301,6 +1310,7 @@
   elSkip.addEventListener("click", skipCurrentTurn);
   elOutcomeAgain.addEventListener("click", startNewBattle);
   elDeployStart.addEventListener("click", beginBattle);
+  elDeployReroll.addEventListener("click", rerollMap);
 
   MAP = makeMap();
   buildBoard();

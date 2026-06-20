@@ -5,6 +5,25 @@ All notable changes to the `1.x` series of DailyDefense are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] — 2026-06-19
+
+### Added — Map re-roll during deploy ("Operation Mulligan")
+- **New "Re-roll Map" button** sits next to "Begin Battle" in the
+  deploy panel. Tapping it calls `makeMap()` for a fresh
+  procedurally generated battlefield, rebuilds tile DOMs, and
+  re-renders the existing party at their default positions.
+- The button only fires during the deploy phase, so once the
+  battle starts the field is locked in until the next skirmish.
+- Lets the player reject an unfavorable map (e.g., a water strip
+  pinning the Mage) before committing to a fight.
+
+### Notes
+- Re-roll keeps the current ally loadout intact (default Warrior /
+  Archer / Mage at I8 / F8 / C8 unless you've already swapped). It
+  doesn't touch initiative — that's still rolled on Begin Battle.
+- The deploy panel actions now use a `grid-template-columns: 1fr
+  1fr` layout so the two buttons share width evenly.
+
 ## [1.21.0] — 2026-06-19
 
 ### Added — Forest cover bonus ("Operation Take Cover")
